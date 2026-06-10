@@ -692,6 +692,69 @@ h2 {
   background: var(--green);
 }
 
+.filter-chip.status-filter.waiting.active {
+  border-color: #c99345;
+  color: #694515;
+  background: var(--amber-soft);
+}
+
+.filter-chip.status-filter.ready.active {
+  border-color: var(--green);
+  color: white;
+  background: var(--green);
+}
+
+.filter-chip.status-filter.collected.active {
+  border-color: var(--blue);
+  color: white;
+  background: var(--blue);
+}
+
+.filter-chip.firing-filter.bisque.active {
+  border-color: #cfb184;
+  color: #644923;
+  background: #efdcbb;
+}
+
+.filter-chip.firing-filter.glaze.active {
+  border-color: #dd7958;
+  color: white;
+  background: #dd7958;
+}
+
+.gallery-section + .gallery-section {
+  margin-top: 42px;
+}
+
+.gallery-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 14px;
+}
+
+.gallery-section-head h2 {
+  margin: 0;
+  font-size: 25px;
+}
+
+.gallery-section-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.gallery-section-head > span {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #f1ece5;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .firing-legend {
   display: flex;
   align-items: center;
@@ -1030,9 +1093,30 @@ h2 {
 
 .instructor-toolbar {
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) auto auto;
-  gap: 10px;
-  margin-bottom: 22px;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 250, 246, 0.8);
+}
+
+.filter-control {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.filter-label {
+  width: 112px;
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.filter-row.compact {
+  margin: 0;
 }
 
 .field {
@@ -1287,12 +1371,17 @@ h2 {
 }
 
 .modal-foot {
+  position: sticky;
+  z-index: 3;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 18px 28px 24px;
   border-top: 1px solid var(--line);
+  background: rgba(255, 253, 248, 0.97);
+  backdrop-filter: blur(14px);
 }
 
 .steps {
@@ -1585,6 +1674,64 @@ h2 {
 .firing-choice.glaze .flow-photo-caption span {
   color: white;
   background: #dd7958;
+}
+
+.all-glaze-card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 2px solid #efb49f;
+  border-radius: 16px;
+  color: #713d31;
+  background: #fff3ed;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.all-glaze-card:hover {
+  transform: translateY(-2px);
+  border-color: #dd7958;
+}
+
+.all-glaze-card.active {
+  border-color: #dd7958;
+  background: #fae1d8;
+  box-shadow: 0 0 0 3px rgba(243, 146, 104, 0.14);
+}
+
+.all-glaze-check {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 2px solid #dd7958;
+  border-radius: 50%;
+  color: white;
+  background: transparent;
+  font-weight: 850;
+}
+
+.all-glaze-card.active .all-glaze-check {
+  background: #dd7958;
+}
+
+.all-glaze-card strong,
+.all-glaze-card small {
+  display: block;
+}
+
+.all-glaze-card small {
+  margin-top: 4px;
+  color: #87635a;
+  font-size: 11px;
 }
 
 .firing-summary {
@@ -1999,11 +2146,45 @@ h2 {
   }
 
   .instructor-toolbar {
-    grid-template-columns: 1fr 1fr;
+    padding: 14px;
   }
 
-  .instructor-toolbar .search-field {
-    grid-column: 1 / -1;
+  .filter-control {
+    display: block;
+  }
+
+  .filter-label {
+    display: block;
+    width: auto;
+    margin-bottom: 8px;
+  }
+
+  .filter-row.compact {
+    gap: 7px;
+  }
+
+  .filter-row.compact .filter-chip {
+    min-height: 36px;
+    padding-inline: 11px;
+    font-size: 10px;
+  }
+
+  .gallery-section + .gallery-section {
+    margin-top: 34px;
+  }
+
+  .gallery-section-head {
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .gallery-section-head h2 {
+    font-size: 21px;
+  }
+
+  .gallery-section-head p {
+    max-width: 245px;
+    font-size: 10px;
   }
 
   .bulk-bar {
@@ -2104,8 +2285,6 @@ h2 {
   }
 
   .modal-foot {
-    position: sticky;
-    bottom: 0;
     background: var(--surface);
   }
 

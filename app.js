@@ -1,4 +1,4 @@
-const STORAGE_KEY = "malina-ceramik-pwa-demo-v1";
+const STORAGE_KEY = "malina-ceramik-pwa-demo-v2";
 
 const icons = {
   home: `<svg viewBox="0 0 24 24"><path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>`,
@@ -86,7 +86,7 @@ const initialState = {
   role: "student",
   view: "home",
   studentFilter: "all",
-  instructorStatus: "waiting",
+  instructorStatus: "all",
   instructorFiring: "all",
   search: "",
   selected: [],
@@ -320,14 +320,17 @@ function statCard(label, count, status) {
 function studentItems() {
   const filters = [
     ["all", "Wszystkie"],
-    ["waiting", "Czekają"],
     ["ready", "Do odbioru"],
+    ["waiting", "Czekają"],
     ["collected", "Odebrane"],
   ];
   const items = state.items
     .filter((item) => item.ownerId === "anna")
     .filter((item) => state.studentFilter === "all" || item.status === state.studentFilter)
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .sort((a, b) => {
+      const priority = { ready: 0, waiting: 1, collected: 2 };
+      return priority[a.status] - priority[b.status] || b.date.localeCompare(a.date);
+    });
 
   return `
     <div class="page-head">
@@ -342,15 +345,45 @@ function studentItems() {
       ${filters
         .map(
           ([id, label]) =>
-            `<button class="filter-chip ${state.studentFilter === id ? "active" : ""}" data-student-filter="${id}" type="button">${label}</button>`,
+            `<button class="filter-chip status-filter ${id} ${state.studentFilter === id ? "active" : ""}" data-student-filter="${id}" type="button">${label}</button>`,
         )
         .join("")}
     </div>
     ${firingLegend()}
     <p class="gallery-gesture-hint">Przytrzymaj zdjęcie, aby otworzyć podgląd.</p>
-    <div class="items-grid gallery-grid">
-      ${items.length ? items.map((item) => itemCard(item, false)).join("") : emptyState("Tu jest pusto", "Zmień filtr albo dodaj nowy wyrób.")}
-    </div>
+    ${items.length ? studentGallerySections(items) : emptyState("Tu jest pusto", "Zmień filtr albo dodaj nowy wyrób.")}
+  `;
+}
+
+function studentGallerySections(items) {
+  const sections = [
+    ["ready", "Do odbioru", "Te wyroby są już wypalone i czekają w pracowni."],
+    ["waiting", "Czekają na wypał", "Wyroby przyjęte przez pracownię."],
+    ["collected", "Odebrane", "Historia odebranych wyrobów."],
+  ];
+
+  return sections
+    .map(([status, title, copy]) =>
+      gallerySection(title, copy, items.filter((item) => item.status === status), false, status),
+    )
+    .join("");
+}
+
+function gallerySection(title, copy, items, selectable, sectionId) {
+  if (!items.length) return "";
+  return `
+    <section class="gallery-section" data-gallery-section="${sectionId}">
+      <div class="gallery-section-head">
+        <div>
+          <h2>${title}</h2>
+          <p>${copy}</p>
+        </div>
+        <span>${items.length} ${pluralItems(items.length)}</span>
+      </div>
+      <div class="items-grid gallery-grid">
+        ${items.map((item) => itemCard(item, selectable && item.status === "waiting")).join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -442,6 +475,17 @@ function instructorGallery() {
     .filter((item) => state.instructorFiring === "all" || item.firing === state.instructorFiring)
     .filter((item) => `${item.name} ${item.owner} ${item.group}`.toLowerCase().includes(state.search.toLowerCase()))
     .sort((a, b) => a.date.localeCompare(b.date));
+  const statusFilters = [
+    ["all", "Wszystkie"],
+    ["waiting", "Czekają na wypał"],
+    ["ready", "Do odbioru"],
+    ["collected", "Odebrane"],
+  ];
+  const firingFilters = [
+    ["all", "Każdy wypał"],
+    ["bisque", "Biskwit"],
+    ["glaze", "Na ostro"],
+  ];
 
   return `
     <div class="page-head">
@@ -457,29 +501,32 @@ function instructorGallery() {
         <label for="search-items">Szukaj kursanta, wyrobu lub dostawy</label>
         <input class="input" id="search-items" type="search" placeholder="np. Anna lub Dostawa 03.06" value="${state.search}" />
       </div>
-      <div class="field">
-        <label for="status-filter">Status</label>
-        <select class="select" id="status-filter">
-          <option value="waiting" ${state.instructorStatus === "waiting" ? "selected" : ""}>Czeka na wypał</option>
-          <option value="ready" ${state.instructorStatus === "ready" ? "selected" : ""}>Gotowy do odbioru</option>
-          <option value="all" ${state.instructorStatus === "all" ? "selected" : ""}>Wszystkie</option>
-        </select>
+      <div class="filter-control">
+        <span class="filter-label">Status</span>
+        <div class="filter-row compact">
+          ${statusFilters
+            .map(
+              ([id, label]) =>
+                `<button class="filter-chip status-filter ${id} ${state.instructorStatus === id ? "active" : ""}" data-instructor-status="${id}" type="button">${label}</button>`,
+            )
+            .join("")}
+        </div>
       </div>
-      <div class="field">
-        <label for="firing-filter">Rodzaj wypału</label>
-        <select class="select" id="firing-filter">
-          <option value="all" ${state.instructorFiring === "all" ? "selected" : ""}>Wszystkie</option>
-          <option value="bisque" ${state.instructorFiring === "bisque" ? "selected" : ""}>Biskwit</option>
-          <option value="glaze" ${state.instructorFiring === "glaze" ? "selected" : ""}>Na ostro</option>
-        </select>
+      <div class="filter-control">
+        <span class="filter-label">Rodzaj wypału</span>
+        <div class="filter-row compact">
+          ${firingFilters
+            .map(
+              ([id, label]) =>
+                `<button class="filter-chip firing-filter ${id} ${state.instructorFiring === id ? "active" : ""}" data-instructor-firing="${id}" type="button">${label}</button>`,
+            )
+            .join("")}
+        </div>
       </div>
     </div>
 
-    ${firingLegend()}
     <p class="gallery-gesture-hint">Dotknij zdjęcia, aby je zaznaczyć. Przytrzymaj, aby otworzyć podgląd.</p>
-    <div class="items-grid gallery-grid">
-      ${filtered.length ? filtered.map((item) => itemCard(item, item.status === "waiting")).join("") : emptyState("Brak pasujących wyrobów", "Zmień filtry lub wyszukiwaną frazę.")}
-    </div>
+    ${filtered.length ? instructorGallerySections(filtered) : emptyState("Brak pasujących wyrobów", "Zmień filtry lub wyszukiwaną frazę.")}
 
     ${
       state.selected.length
@@ -497,6 +544,21 @@ function instructorGallery() {
         : ""
     }
   `;
+}
+
+function instructorGallerySections(items) {
+  const sections = [
+    ["waiting-bisque", "Czekają na biskwit", "Najstarsze sztuki są pokazane jako pierwsze.", (item) => item.status === "waiting" && item.firing === "bisque"],
+    ["waiting-glaze", "Czekają na wypał na ostro", "Wyroby szkliwione oczekujące na wypał.", (item) => item.status === "waiting" && item.firing === "glaze"],
+    ["ready", "Gotowe do odbioru", "Wypalone wyroby oczekujące na kursantów.", (item) => item.status === "ready"],
+    ["collected", "Odebrane", "Wyroby, które opuściły już pracownię.", (item) => item.status === "collected"],
+  ];
+
+  return sections
+    .map(([id, title, copy, matcher]) =>
+      gallerySection(title, copy, items.filter(matcher), true, id),
+    )
+    .join("");
 }
 
 function settlementsView() {
@@ -663,18 +725,22 @@ function attachViewListeners() {
     nextSearch?.setSelectionRange(state.search.length, state.search.length);
   });
 
-  document.querySelector("#status-filter")?.addEventListener("change", (event) => {
-    state.instructorStatus = event.target.value;
-    state.selected = [];
-    saveState();
-    render();
+  document.querySelectorAll("[data-instructor-status]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.instructorStatus = button.dataset.instructorStatus;
+      state.selected = [];
+      saveState();
+      render();
+    });
   });
 
-  document.querySelector("#firing-filter")?.addEventListener("change", (event) => {
-    state.instructorFiring = event.target.value;
-    state.selected = [];
-    saveState();
-    render();
+  document.querySelectorAll("[data-instructor-firing]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.instructorFiring = button.dataset.instructorFiring;
+      state.selected = [];
+      saveState();
+      render();
+    });
   });
 
   document.querySelectorAll(".weight-input").forEach((input) => {
@@ -803,7 +869,6 @@ function renderAddFlow() {
   const modal = document.querySelector("#modal");
   const titles = [
     "Dodaj zdjęcia wyrobów",
-    "Czy rozpoznajesz swoje wyroby?",
     "Zaznacz wyroby na ostro",
   ];
   modal.innerHTML = `
@@ -811,8 +876,8 @@ function renderAddFlow() {
       <div>
         <h2 id="modal-title">${titles[addFlow.step - 1]}</h2>
         <p>${addFlowStepDescription()}</p>
-        <div class="steps" aria-label="Krok ${addFlow.step} z 3">
-          ${[1, 2, 3].map((step) => `<span class="step-dot ${step <= addFlow.step ? "active" : ""}"></span>`).join("")}
+        <div class="steps" aria-label="Krok ${addFlow.step} z 2">
+          ${[1, 2].map((step) => `<span class="step-dot ${step <= addFlow.step ? "active" : ""}"></span>`).join("")}
         </div>
       </div>
       <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
@@ -825,8 +890,7 @@ function renderAddFlow() {
           ? `<button class="primary-button" id="add-next" type="button" ${addFlow.photos.length ? "" : "disabled"}>Dodałem już wszystkie zdjęcia</button>`
           : ""
       }
-      ${addFlow.step === 2 ? '<button class="primary-button" id="add-next" type="button">Tak, rozpoznaję wszystkie</button>' : ""}
-      ${addFlow.step === 3 ? '<button class="primary-button" id="confirm-add" type="button">Dodaj wyroby do pracowni</button>' : ""}
+      ${addFlow.step === 2 ? '<button class="primary-button" id="confirm-add" type="button">Dodaj wyroby do pracowni</button>' : ""}
     </div>
   `;
 
@@ -840,6 +904,12 @@ function renderAddFlow() {
     renderAddFlow();
   });
   modal.querySelector("#confirm-add")?.addEventListener("click", confirmNewItems);
+  modal.querySelector("#all-glaze")?.addEventListener("click", () => {
+    addFlow.photos.forEach((photo) => {
+      photo.firing = "glaze";
+    });
+    renderAddFlow();
+  });
 
   modal.querySelectorAll("[data-toggle-firing]").forEach((button) => {
     const toggleFiring = () => {
@@ -874,15 +944,10 @@ function renderAddFlow() {
     });
   });
 
-  modal.querySelector("#repeat-photos")?.addEventListener("click", () => {
-    addFlow.step = 1;
-    renderAddFlow();
-  });
 }
 
 function addFlowStepDescription() {
-  if (addFlow.step === 1) return "Jedno zdjęcie powinno przedstawiać jeden cały wyrób.";
-  if (addFlow.step === 2) return "To dokładnie taki podgląd otrzyma instruktor.";
+  if (addFlow.step === 1) return "Dodaj po jednym wyraźnym zdjęciu każdej sztuki.";
   return "Domyślnie wszystkie sztuki są oznaczone jako biskwit.";
 }
 
@@ -912,30 +977,34 @@ function addFlowBody() {
       </div>
       ${
         addFlow.photos.length
-          ? `<div class="photo-section-head"><strong>Dodane zdjęcia</strong><span>${addFlow.photos.length} ${pluralPhotos(addFlow.photos.length)}</span></div>${photoGrid("editing")}`
+          ? `
+            <div class="recognition-note">
+              <strong>Jeżeli Ty nie poznajesz swojego wyrobu na zdjęciu, my też go później nie poznamy.</strong>
+              <p>Sprawdź podgląd. Usuń nieczytelne zdjęcie krzyżykiem i od razu dodaj nowe.</p>
+            </div>
+            <div class="photo-section-head"><strong>Dodane zdjęcia</strong><span>${addFlow.photos.length} ${pluralPhotos(addFlow.photos.length)}</span></div>
+            ${photoGrid("editing")}
+          `
           : ""
       }
     `;
   }
 
-  if (addFlow.step === 2) {
-    return `
-      <div class="recognition-note recognition-note-top">
-        <strong>Czy na tym podglądzie jesteś w stanie rozpoznać wszystkie swoje wyroby?</strong>
-        <p>Instruktor zobaczy je dokładnie w ten sposób. Jeśli któreś zdjęcie jest nieczytelne, wróć i zrób je ponownie.</p>
-      </div>
-      ${photoGrid("preview")}
-      <button class="ghost-button repeat-button" id="repeat-photos" type="button">Nie rozpoznaję któregoś · Powtórz zdjęcia</button>
-    `;
-  }
-
   const glazeCount = addFlow.photos.filter((photo) => photo.firing === "glaze").length;
+  const allGlaze = glazeCount === addFlow.photos.length;
   return `
     <div class="firing-instruction">
       <strong>Kliknij tylko te wyroby, które mają być wypalone na ostro.</strong>
       <p>Beżowy oznacza biskwit. Po kliknięciu kafelek zmieni kolor i podpis na „Na ostro”.</p>
     </div>
     ${photoGrid("firing")}
+    <button class="all-glaze-card ${allGlaze ? "active" : ""}" id="all-glaze" type="button">
+      <span class="all-glaze-check" aria-hidden="true">${allGlaze ? "✓" : ""}</span>
+      <span>
+        <strong>Wszystko jest na ostro</strong>
+        <small>Jednym kliknięciem oznacz wszystkie dodane zdjęcia.</small>
+      </span>
+    </button>
     <div class="firing-summary">
       <span><i class="summary-dot bisque"></i>Biskwit: <strong>${addFlow.photos.length - glazeCount}</strong></span>
       <span><i class="summary-dot glaze"></i>Na ostro: <strong>${glazeCount}</strong></span>
