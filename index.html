@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#315f4b" />
+    <meta
+      name="description"
+      content="Malina ceramik studio ceramiki - prosty obieg ceramiki od półki do odbioru."
+    />
+    <title>Malina ceramik studio ceramiki</title>
+    <link rel="icon" href="assets/malina-app-icon.png" type="image/png" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Nawigacja główna">
+        <a class="brand" href="#" aria-label="Malina ceramik studio ceramiki">
+          <img
+            class="brand-logo"
+            src="assets/malina-wordmark.png"
+            alt="Malina ceramik, studio ceramiki"
+          />
+        </a>
+
+        <nav class="desktop-nav" id="desktop-nav"></nav>
+
+        <div class="sidebar-foot">
+          <div class="demo-note">
+            <span class="dot"></span>
+            <div>
+              <strong>Wersja testowa</strong>
+              <small>Możesz klikać bez obaw</small>
+            </div>
+          </div>
+          <button class="text-button" id="reset-demo" type="button">Przywróć dane demo</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <button class="mobile-brand" data-view="home" aria-label="Przejdź na początek">
+            <span class="mobile-logo-badge">
+              <img src="assets/malina-apron.png" alt="" />
+            </span>
+            <img
+              class="mobile-wordmark"
+              src="assets/malina-wordmark.png"
+              alt="Malina ceramik"
+            />
+          </button>
+
+          <div class="role-switch" aria-label="Wybierz widok demonstracyjny">
+            <button class="role-option active" data-role="student" type="button">Kursant</button>
+            <button class="role-option" data-role="instructor" type="button">Instruktor</button>
+          </div>
+
+          <button class="profile-button" id="profile-button" type="button" aria-label="Profil użytkownika">
+            <span class="avatar" id="avatar">AK</span>
+            <span class="profile-copy">
+              <strong id="profile-name">Anna Kowalska</strong>
+              <small id="profile-role">Kursantka</small>
+            </span>
+            <span class="chevron" aria-hidden="true">⌄</span>
+          </button>
+        </header>
+
+        <section class="content" id="app-content" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Nawigacja mobilna"></nav>
+
+    <div class="modal-backdrop hidden" id="modal-backdrop">
+      <section
+        class="modal"
+        id="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      ></section>
+    </div>
+
+    <div class="toast hidden" id="toast" role="status"></div>
+    <input id="photo-input" type="file" accept="image/*" capture="environment" multiple hidden />
+
+    <script src="app.js"></script>
+  </body>
+</html>

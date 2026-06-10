@@ -1,0 +1,8 @@
+outputs/
+work/
+
+# Duze pliki zrodlowe. Aplikacja korzysta z lekkich wersji WebP.
+assets/kubek.png
+assets/miska.png
+assets/talerz.png
+assets/wazon.png
