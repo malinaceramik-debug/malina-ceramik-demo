@@ -8,7 +8,77 @@ const icons = {
   bell: `<svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>`,
   users: `<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-5 3-8 7-8s7 3 7 8"/><path d="M16 4a4 4 0 0 1 0 8M17 14c3 .7 5 3 5 7"/></svg>`,
   camera: `<svg viewBox="0 0 24 24"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  palette: `<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18h1.4a1.6 1.6 0 0 0 0-3.2h-1a1.5 1.5 0 0 1 0-3h2.8A5.8 5.8 0 0 0 21 9c0-3.3-4-6-9-6Z"/><circle cx="7.5" cy="10" r="1"/><circle cx="10" cy="6.8" r="1"/><circle cx="15" cy="7" r="1"/><circle cx="17.5" cy="10.5" r="1"/></svg>`,
 };
+
+const initialGlazes = [
+  {
+    id: "lesna-zielen",
+    name: "Leśna zieleń",
+    maker: "Szkliwo pracowni",
+    code: "SZ-12",
+    image: "assets/talerz.webp",
+    color: "#66785f",
+    finish: "Błyszczące",
+    temperature: "1220–1240°C",
+    clays: ["Jasna kamionka", "Beżowa kamionka"],
+    description: "Głęboka zieleń, która mocniej zbiera się w zagłębieniach i na fakturze.",
+    notes: "Najpewniejszy efekt przy 2–3 cienkich warstwach.",
+  },
+  {
+    id: "kobaltowy-deszcz",
+    name: "Kobaltowy deszcz",
+    maker: "Szkliwo pracowni",
+    code: "SZ-07",
+    image: "assets/miska.webp",
+    color: "#496779",
+    finish: "Efektowe",
+    temperature: "1220–1240°C",
+    clays: ["Jasna kamionka"],
+    description: "Niebieskie przejścia i jaśniejsze smugi, szczególnie widoczne na pionowych ściankach.",
+    notes: "Lubi wyraźną fakturę. Efekt może różnić się między półkami pieca.",
+  },
+  {
+    id: "malinowy-pyl",
+    name: "Malinowy pył",
+    maker: "Szkliwo pracowni",
+    code: "SZ-19",
+    image: "assets/kubek.webp",
+    color: "#a46662",
+    finish: "Satynowe",
+    temperature: "1200–1240°C",
+    clays: ["Jasna kamionka", "Czerwona kamionka"],
+    description: "Ciepły, przygaszony róż z delikatnymi zmianami tonu na rantach.",
+    notes: "Na czerwonej glinie wychodzi ciemniej i bardziej ziemiście.",
+  },
+  {
+    id: "miodowy",
+    name: "Miodowy",
+    maker: "Szkliwo pracowni",
+    code: "SZ-03",
+    image: "assets/wazon.webp",
+    color: "#a06f38",
+    finish: "Błyszczące",
+    temperature: "1060°C",
+    clays: ["Jasna glina"],
+    description: "Ciepłe, transparentne szkliwo podkreślające ślady dłoni i rysunek gliny.",
+    notes: "Dobrze wygląda na reliefach i odciśniętych wzorach.",
+  },
+];
+
+const materialOptions = {
+  clay: ["Jasna kamionka", "Beżowa kamionka", "Czerwona kamionka", "Jasna glina"],
+  glazes: initialGlazes.map((glaze) => glaze.name),
+  paints: ["Kobaltowa", "Czarna", "Biała angoba", "Ceglasta angoba"],
+  temperature: ["1060°C", "1200°C", "1220°C", "1240°C"],
+};
+
+const recipeCategories = [
+  { id: "clay", label: "Glina", multiple: false },
+  { id: "glazes", label: "Szkliwa", multiple: true },
+  { id: "paints", label: "Farby", multiple: true },
+  { id: "temperature", label: "Temperatura", multiple: false },
+];
 
 const initialItems = [
   {
@@ -21,6 +91,13 @@ const initialItems = [
     firing: "bisque",
     group: "Dostawa 03.06",
     date: "2026-06-03",
+    recipe: {
+      clay: ["Jasna kamionka"],
+      glazes: [],
+      paints: ["Kobaltowa"],
+      temperature: ["1240°C"],
+      note: "Kobalt nakładany szerokim pędzlem, dwie warstwy.",
+    },
   },
   {
     id: 2,
@@ -33,6 +110,13 @@ const initialItems = [
     group: "Dostawa 28.05",
     date: "2026-05-28",
     firedAt: "2026-06-08",
+    recipe: {
+      clay: ["Jasna kamionka"],
+      glazes: ["Kobaltowy deszcz"],
+      paints: [],
+      temperature: ["1240°C"],
+      note: "Trzy cienkie warstwy szkliwa.",
+    },
   },
   {
     id: 3,
@@ -44,6 +128,13 @@ const initialItems = [
     firing: "bisque",
     group: "Dostawa 30.05",
     date: "2026-05-30",
+    recipe: {
+      clay: ["Beżowa kamionka"],
+      glazes: ["Miodowy"],
+      paints: [],
+      temperature: ["1060°C"],
+      note: "",
+    },
   },
   {
     id: 4,
@@ -55,6 +146,13 @@ const initialItems = [
     firing: "glaze",
     group: "Dostawa 01.06",
     date: "2026-06-01",
+    recipe: {
+      clay: ["Jasna kamionka"],
+      glazes: ["Leśna zieleń"],
+      paints: ["Biała angoba"],
+      temperature: ["1240°C"],
+      note: "Szkliwo tylko wewnątrz, gałązka malowana angobą.",
+    },
   },
   {
     id: 5,
@@ -67,6 +165,13 @@ const initialItems = [
     group: "Dostawa 24.05",
     date: "2026-05-24",
     firedAt: "2026-06-06",
+    recipe: {
+      clay: ["Czerwona kamionka"],
+      glazes: ["Malinowy pył"],
+      paints: [],
+      temperature: ["1220°C"],
+      note: "",
+    },
   },
   {
     id: 6,
@@ -79,6 +184,13 @@ const initialItems = [
     group: "Dostawa 12.05",
     date: "2026-05-12",
     firedAt: "2026-05-22",
+    recipe: {
+      clay: ["Jasna kamionka"],
+      glazes: ["Leśna zieleń"],
+      paints: [],
+      temperature: ["1240°C"],
+      note: "Dwie warstwy. Na rancie kolor wyszedł jaśniejszy.",
+    },
   },
 ];
 
@@ -88,9 +200,16 @@ const initialState = {
   studentFilter: "all",
   instructorStatus: "all",
   instructorFiring: "all",
+  glazeFilter: "all",
   search: "",
   selected: [],
   items: initialItems,
+  customMaterialOptions: {
+    clay: [],
+    glazes: [],
+    paints: [],
+    temperature: [],
+  },
   payments: [
     {
       id: 1,
@@ -116,6 +235,7 @@ let addFlow = {
   step: 1,
   photos: [],
 };
+let recipeDraft = null;
 let toastTimer;
 
 function loadState() {
@@ -126,6 +246,7 @@ function loadState() {
       const normalized = {
         ...item,
         code: item.code || `MC-${String(item.id).padStart(4, "0")}`,
+        recipe: normalizeRecipe(item.recipe),
       };
       if (/^Wyrób \d+$/.test(normalized.name || "")) delete normalized.name;
       return normalized;
@@ -140,6 +261,16 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function normalizeRecipe(recipe = {}) {
+  return {
+    clay: Array.isArray(recipe.clay) ? recipe.clay : [],
+    glazes: Array.isArray(recipe.glazes) ? recipe.glazes : [],
+    paints: Array.isArray(recipe.paints) ? recipe.paints : [],
+    temperature: Array.isArray(recipe.temperature) ? recipe.temperature : [],
+    note: recipe.note || "",
+  };
+}
+
 function icon(name) {
   return `<span class="nav-icon" aria-hidden="true">${icons[name] || icons.home}</span>`;
 }
@@ -149,12 +280,14 @@ function navItems() {
     return [
       { id: "home", label: "Początek", icon: "home" },
       { id: "my-items", label: "Moje wyroby", icon: "gallery" },
+      { id: "glazes", label: "Katalog szkliw", icon: "palette" },
       { id: "history", label: "Historia", icon: "archive" },
       { id: "notifications", label: "Powiadomienia", icon: "bell" },
     ];
   }
   return [
     { id: "gallery", label: "Do wypału", icon: "gallery" },
+    { id: "glazes", label: "Katalog szkliw", icon: "palette" },
     { id: "settlements", label: "Rozliczenia", icon: "money" },
     { id: "clients", label: "Kursanci", icon: "users" },
     { id: "archive", label: "Archiwum", icon: "archive" },
@@ -181,6 +314,16 @@ function itemLabel(item) {
   return item.name || itemCode(item);
 }
 
+function studentItemLabel(item) {
+  return item.personalTitle || item.name || `Wyrób z ${formatFullDate(item.date)}`;
+}
+
+function visibleItemLabel(item) {
+  return state.role === "student" && item.ownerId === "anna"
+    ? studentItemLabel(item)
+    : itemCode(item);
+}
+
 function firingLegend() {
   return `
     <div class="firing-legend" aria-label="Kolory rodzaju wypalu">
@@ -195,6 +338,22 @@ function formatDate(value) {
     day: "numeric",
     month: "short",
   }).format(new Date(`${value}T12:00:00`));
+}
+
+function formatFullDate(value) {
+  return new Intl.DateTimeFormat("pl-PL", {
+    day: "numeric",
+    month: "long",
+  }).format(new Date(`${value}T12:00:00`));
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function daysSince(value) {
@@ -243,10 +402,12 @@ function render() {
   if (state.role === "student") {
     if (state.view === "home") content.innerHTML = studentHome();
     else if (state.view === "my-items") content.innerHTML = studentItems();
+    else if (state.view === "glazes") content.innerHTML = glazeCatalogView();
     else if (state.view === "history") content.innerHTML = studentHistory();
     else content.innerHTML = notificationsView();
   } else {
     if (state.view === "gallery") content.innerHTML = instructorGallery();
+    else if (state.view === "glazes") content.innerHTML = glazeCatalogView();
     else if (state.view === "settlements") content.innerHTML = settlementsView();
     else if (state.view === "clients") content.innerHTML = clientsView();
     else content.innerHTML = instructorArchive();
@@ -309,6 +470,15 @@ function studentHome() {
         .map((item) => itemCard(item, false))
         .join("")}
     </div>
+
+    <article class="catalog-teaser">
+      <div>
+        <p class="eyebrow">Biblioteka pracowni</p>
+        <h2>Znajdź pomysł na kolejne zdobienie</h2>
+        <p>Zobacz, jak szkliwa zachowywały się na różnych glinach i przy różnych temperaturach.</p>
+      </div>
+      <button class="primary-button" data-view="glazes" type="button">Otwórz katalog szkliw</button>
+    </article>
   `;
 }
 
@@ -398,9 +568,18 @@ function gallerySection(title, copy, items, selectable, sectionId) {
 
 function itemCard(item, selectable) {
   const selected = state.selected.includes(item.id);
-  const label = itemLabel(item);
+  const label = visibleItemLabel(item);
+  const isStudentItem = state.role === "student" && item.ownerId === "anna";
+  const groupItems = state.items
+    .filter((candidate) => candidate.ownerId === item.ownerId && candidate.group === item.group)
+    .sort((a, b) => a.id - b.id);
+  const position = groupItems.findIndex((candidate) => candidate.id === item.id) + 1;
+  const recipeCount = recipeCategories.reduce(
+    (count, category) => count + normalizeRecipe(item.recipe)[category.id].length,
+    0,
+  );
   return `
-    <article class="item-card firing-${item.firing} ${selected ? "selected" : ""}" data-item-id="${item.id}" ${selectable ? 'role="button" tabindex="0" aria-label="Zaznacz wyrób"' : ""}>
+    <article class="item-card firing-${item.firing} ${selected ? "selected" : ""}" data-item-id="${item.id}" data-selectable="${selectable}" role="button" tabindex="0" aria-label="${selectable ? "Zaznacz wyrób" : `Otwórz ${escapeHtml(label)}`}">
       <div class="item-photo">
         <img src="${item.image}" alt="${label}, wyrób: ${item.owner}" />
         ${selectable ? `<span class="select-circle" aria-hidden="true">✓</span>` : ""}
@@ -411,15 +590,81 @@ function itemCard(item, selectable) {
         <div class="item-title-row">
           <div>
             <h3>${label}</h3>
-            <p>${firingLabel(item.firing)} · ${formatDate(item.date)}</p>
+            <p>${isStudentItem ? (groupItems.length > 1 ? `${position} z ${groupItems.length} w tej dostawie` : `Z dostawy ${formatFullDate(item.date)}`) : `${firingLabel(item.firing)} · ${formatDate(item.date)}`}</p>
           </div>
         </div>
         <div class="item-meta">
-          <span class="owner-pill">${item.owner}</span>
-          <span class="group-pill">${item.group}</span>
+          ${
+            isStudentItem
+              ? `<span class="recipe-indicator ${recipeCount ? "filled" : ""}">${recipeCount ? "Ma notatkę zdobienia" : "Dodaj notatkę"}</span>
+                 <span class="group-pill">${formatDate(item.date)}</span>`
+              : `<span class="owner-pill">${item.owner}</span>
+                 <span class="group-pill">${item.group}</span>`
+          }
         </div>
       </div>
     </article>
+  `;
+}
+
+function glazeCatalogView() {
+  const filters = ["all", "Błyszczące", "Satynowe", "Efektowe"];
+  const glazes = initialGlazes.filter(
+    (glaze) => state.glazeFilter === "all" || glaze.finish === state.glazeFilter,
+  );
+
+  return `
+    <div class="page-head catalog-page-head">
+      <div>
+        <p class="eyebrow">Wspólna wiedza pracowni</p>
+        <h1>Katalog szkliw</h1>
+        <p class="lead">Inspiracje, próby i doświadczenia zebrane przez Malina Ceramik. Zobacz efekt, a potem zapisz użyte szkliwo przy swoim wyrobie.</p>
+      </div>
+    </div>
+    <div class="catalog-notice">
+      <strong>Każdy wypał może wyglądać trochę inaczej.</strong>
+      <span>Na efekt wpływają glina, liczba warstw, temperatura i miejsce w piecu.</span>
+    </div>
+    <div class="filter-row catalog-filters">
+      ${filters
+        .map(
+          (filter) =>
+            `<button class="filter-chip ${state.glazeFilter === filter ? "active" : ""}" data-glaze-filter="${filter}" type="button">${filter === "all" ? "Wszystkie" : filter}</button>`,
+        )
+        .join("")}
+    </div>
+    <div class="glaze-grid">
+      ${glazes.map(glazeCard).join("")}
+    </div>
+  `;
+}
+
+function glazeCard(glaze) {
+  const examples = state.items.filter((item) =>
+    normalizeRecipe(item.recipe).glazes.includes(glaze.name),
+  ).length;
+  return `
+    <button class="glaze-card" data-glaze-id="${glaze.id}" type="button">
+      <div class="glaze-photo">
+        <img src="${glaze.image}" alt="Przykład szkliwa ${glaze.name}" />
+        <span class="glaze-swatch" style="--swatch: ${glaze.color}" aria-hidden="true"></span>
+        <span class="glaze-finish">${glaze.finish}</span>
+      </div>
+      <div class="glaze-card-body">
+        <div class="glaze-title-row">
+          <div>
+            <small>${glaze.maker} · ${glaze.code}</small>
+            <h2>${glaze.name}</h2>
+          </div>
+          <span aria-hidden="true">→</span>
+        </div>
+        <p>${glaze.description}</p>
+        <div class="glaze-card-meta">
+          <span>${glaze.temperature}</span>
+          <span>${examples} ${examples === 1 ? "przykład" : "przykłady"}</span>
+        </div>
+      </div>
+    </button>
   `;
 }
 
@@ -726,6 +971,18 @@ function attachViewListeners() {
     });
   });
 
+  document.querySelectorAll("[data-glaze-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.glazeFilter = button.dataset.glazeFilter;
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-glaze-id]").forEach((button) => {
+    button.addEventListener("click", () => openGlazePreview(button.dataset.glazeId));
+  });
+
   attachGalleryInteractions();
 
   document.querySelector("#clear-selection")?.addEventListener("click", () => {
@@ -782,7 +1039,7 @@ function attachViewListeners() {
 function attachGalleryInteractions() {
   document.querySelectorAll(".gallery-grid .item-card").forEach((card) => {
     const itemId = Number(card.dataset.itemId);
-    const selectable = card.getAttribute("role") === "button";
+    const selectable = card.dataset.selectable === "true";
     let pressTimer;
     let longPressTriggered = false;
     let startX = 0;
@@ -818,6 +1075,7 @@ function attachGalleryInteractions() {
         return;
       }
       if (selectable) toggleSelection(itemId);
+      else openItemPreview(itemId);
     });
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !selectable) {
@@ -834,12 +1092,14 @@ function attachGalleryInteractions() {
 function openItemPreview(itemId) {
   const item = state.items.find((candidate) => candidate.id === itemId);
   if (!item) return;
-  const label = itemLabel(item);
+  const isStudentItem = state.role === "student" && item.ownerId === "anna";
+  const label = visibleItemLabel(item);
+  const recipe = normalizeRecipe(item.recipe);
   const modal = document.querySelector("#modal");
   modal.innerHTML = `
     <div class="modal-head preview-modal-head">
       <div>
-        <p class="eyebrow">Podgląd wyrobu</p>
+        <p class="eyebrow">${isStudentItem ? "Twój wyrób" : `Wyrób ${itemCode(item)}`}</p>
         <h2 id="modal-title">${label}</h2>
       </div>
       <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
@@ -849,21 +1109,238 @@ function openItemPreview(itemId) {
       <span class="preview-firing-badge ${item.firing}">${firingLabel(item.firing)}</span>
     </div>
     <div class="item-preview-details">
-      <div class="preview-owner">
-        <span class="avatar">${item.owner
-          .split(" ")
-          .map((part) => part[0])
-          .join("")}</span>
-        <div><strong>${item.owner}</strong><small>${item.group}</small></div>
-      </div>
+      ${
+        isStudentItem
+          ? `<div class="student-item-intro">
+               <strong>Historia tej konkretnej rzeczy</strong>
+               <span>${item.group} · numer pomocniczy pracowni ${itemCode(item)}</span>
+             </div>`
+          : `<div class="preview-owner">
+               <span class="avatar">${item.owner
+                 .split(" ")
+                 .map((part) => part[0])
+                 .join("")}</span>
+               <div><strong>${item.owner}</strong><small>${item.group}</small></div>
+             </div>`
+      }
       <div class="preview-facts">
         <div><small>Status</small><strong>${statusLabel(item.status)}</strong></div>
         <div><small>Wypał</small><strong>${firingLabel(item.firing)}</strong></div>
         <div><small>Przyniesiono</small><strong>${formatDate(item.date)}</strong></div>
       </div>
+      ${recipeSummary(item)}
     </div>
     <div class="modal-foot preview-modal-foot">
       <button class="secondary-button close-modal" type="button">Zamknij podgląd</button>
+      ${isStudentItem ? '<button class="primary-button" id="edit-recipe" type="button">Edytuj notatkę zdobienia</button>' : ""}
+    </div>`;
+  modal.querySelectorAll(".close-modal").forEach((button) => button.addEventListener("click", closeModal));
+  modal.querySelector("#edit-recipe")?.addEventListener("click", () => openRecipeEditor(itemId));
+  openModal();
+}
+
+function recipeSummary(item) {
+  const recipe = normalizeRecipe(item.recipe);
+  const hasRecipe =
+    recipeCategories.some((category) => recipe[category.id].length) || recipe.note.trim();
+  return `
+    <section class="recipe-summary ${hasRecipe ? "" : "empty"}">
+      <div class="recipe-summary-head">
+        <div>
+          <small>Osobisty katalog</small>
+          <h3>Notatka zdobienia</h3>
+        </div>
+        ${hasRecipe ? '<span class="recipe-saved">Zapisana</span>' : ""}
+      </div>
+      ${
+        hasRecipe
+          ? `<div class="recipe-summary-groups">
+              ${recipeCategories
+                .map(
+                  (category) => `
+                    <div>
+                      <small>${category.label}</small>
+                      <p>${recipe[category.id].length ? recipe[category.id].map((value) => `<span>${escapeHtml(value)}</span>`).join("") : "<em>Nie zapisano</em>"}</p>
+                    </div>`,
+                )
+                .join("")}
+            </div>
+            ${recipe.note ? `<blockquote>${escapeHtml(recipe.note)}</blockquote>` : ""}`
+          : `<p>Dodaj glinę, szkliwa, farby i temperaturę. Przy następnym wyrobie łatwo odnajdziesz sprawdzoną kombinację.</p>`
+      }
+    </section>
+  `;
+}
+
+function openRecipeEditor(itemId) {
+  const item = state.items.find((candidate) => candidate.id === itemId);
+  if (!item) return;
+  recipeDraft = {
+    itemId,
+    ...structuredClone(normalizeRecipe(item.recipe)),
+  };
+  renderRecipeEditor();
+}
+
+function renderRecipeEditor() {
+  const item = state.items.find((candidate) => candidate.id === recipeDraft?.itemId);
+  if (!item || !recipeDraft) return;
+  const modal = document.querySelector("#modal");
+  modal.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">Osobisty katalog</p>
+        <h2 id="modal-title">Jak powstał ten wyrób?</h2>
+        <p>Wybierz fasolki. Wszystkie pola są opcjonalne.</p>
+      </div>
+      <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
+    </div>
+    <div class="modal-body recipe-editor">
+      <div class="recipe-item-strip">
+        <img src="${item.image}" alt="" />
+        <div><strong>${studentItemLabel(item)}</strong><span>${formatFullDate(item.date)}</span></div>
+      </div>
+      ${recipeCategories.map(recipeCategoryEditor).join("")}
+      <label class="recipe-note-field">
+        <span>Krótka notatka</span>
+        <textarea id="recipe-note" rows="3" placeholder="np. 3 cienkie warstwy, nakładane pędzlem">${escapeHtml(recipeDraft.note)}</textarea>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="secondary-button" id="cancel-recipe" type="button">Anuluj</button>
+      <button class="primary-button" id="save-recipe" type="button">Zapisz notatkę</button>
+    </div>`;
+
+  modal.querySelector(".close-modal").addEventListener("click", () => openItemPreview(item.id));
+  modal.querySelector("#cancel-recipe").addEventListener("click", () => openItemPreview(item.id));
+  modal.querySelectorAll("[data-recipe-option]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const category = button.dataset.recipeCategory;
+      const value = button.dataset.recipeOption;
+      const config = recipeCategories.find((candidate) => candidate.id === category);
+      const selected = recipeDraft[category].includes(value);
+      recipeDraft[category] = selected
+        ? recipeDraft[category].filter((candidate) => candidate !== value)
+        : config.multiple
+          ? [...recipeDraft[category], value]
+          : [value];
+      recipeDraft.note = modal.querySelector("#recipe-note").value;
+      renderRecipeEditor();
+    });
+  });
+  modal.querySelectorAll("[data-add-custom]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const category = button.dataset.addCustom;
+      const input = modal.querySelector(`[data-custom-input="${category}"]`);
+      const value = input.value.trim();
+      if (!value) return;
+      const config = recipeCategories.find((candidate) => candidate.id === category);
+      if (!state.customMaterialOptions[category].includes(value)) {
+        state.customMaterialOptions[category].push(value);
+      }
+      recipeDraft[category] = config.multiple
+        ? [...new Set([...recipeDraft[category], value])]
+        : [value];
+      recipeDraft.note = modal.querySelector("#recipe-note").value;
+      saveState();
+      renderRecipeEditor();
+    });
+  });
+  modal.querySelector("#save-recipe").addEventListener("click", () => {
+    const note = modal.querySelector("#recipe-note").value.trim();
+    state.items = state.items.map((candidate) =>
+      candidate.id === item.id
+        ? {
+            ...candidate,
+            recipe: {
+              clay: recipeDraft.clay,
+              glazes: recipeDraft.glazes,
+              paints: recipeDraft.paints,
+              temperature: recipeDraft.temperature,
+              note,
+            },
+          }
+        : candidate,
+    );
+    saveState();
+    openItemPreview(item.id);
+    showToast("Notatka zdobienia została zapisana.");
+  });
+}
+
+function recipeCategoryEditor(category) {
+  const options = [
+    ...materialOptions[category.id],
+    ...(state.customMaterialOptions?.[category.id] || []),
+  ];
+  return `
+    <fieldset class="recipe-category">
+      <legend>${category.label}<small>${category.multiple ? "Możesz wybrać kilka" : "Wybierz jedną"}</small></legend>
+      <div class="recipe-chip-list">
+        ${[...new Set(options)]
+          .map(
+            (option) =>
+              `<button class="recipe-chip ${recipeDraft[category.id].includes(option) ? "active" : ""}" data-recipe-category="${category.id}" data-recipe-option="${escapeHtml(option)}" type="button">${escapeHtml(option)}</button>`,
+          )
+          .join("")}
+      </div>
+      <div class="custom-chip-row">
+        <input class="input" data-custom-input="${category.id}" type="text" placeholder="Dodaj własną fasolkę" />
+        <button class="secondary-button" data-add-custom="${category.id}" type="button">Dodaj</button>
+      </div>
+    </fieldset>
+  `;
+}
+
+function openGlazePreview(glazeId) {
+  const glaze = initialGlazes.find((candidate) => candidate.id === glazeId);
+  if (!glaze) return;
+  const examples = state.items.filter((item) =>
+    normalizeRecipe(item.recipe).glazes.includes(glaze.name),
+  );
+  const modal = document.querySelector("#modal");
+  modal.innerHTML = `
+    <div class="modal-head glaze-modal-head">
+      <div>
+        <p class="eyebrow">${glaze.maker} · ${glaze.code}</p>
+        <h2 id="modal-title">${glaze.name}</h2>
+      </div>
+      <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
+    </div>
+    <div class="glaze-detail-hero">
+      <img src="${glaze.image}" alt="Przykład szkliwa ${glaze.name}" />
+      <span class="glaze-detail-swatch" style="--swatch: ${glaze.color}"></span>
+    </div>
+    <div class="modal-body glaze-detail-body">
+      <p class="glaze-detail-description">${glaze.description}</p>
+      <div class="glaze-detail-facts">
+        <div><small>Wykończenie</small><strong>${glaze.finish}</strong></div>
+        <div><small>Temperatura</small><strong>${glaze.temperature}</strong></div>
+        <div><small>Sprawdzone gliny</small><strong>${glaze.clays.join(", ")}</strong></div>
+      </div>
+      <div class="catalog-notice compact">
+        <strong>Wskazówka pracowni</strong>
+        <span>${glaze.notes}</span>
+      </div>
+      <section class="glaze-examples">
+        <div>
+          <small>Z doświadczeń pracowni</small>
+          <h3>Wyroby z tym szkliwem</h3>
+        </div>
+        ${
+          examples.length
+            ? `<div class="glaze-example-row">${examples
+                .map(
+                  (item) =>
+                    `<img src="${item.image}" alt="${studentItemLabel(item)}" title="${studentItemLabel(item)}" />`,
+                )
+                .join("")}</div>`
+            : "<p>Pierwsze przykłady pojawią się po zapisaniu szkliwa przy wyrobie.</p>"
+        }
+      </section>
+    </div>
+    <div class="modal-foot preview-modal-foot">
+      <button class="primary-button close-modal" type="button">Wróć do katalogu</button>
     </div>`;
   modal.querySelectorAll(".close-modal").forEach((button) => button.addEventListener("click", closeModal));
   openModal();
@@ -1086,6 +1563,7 @@ function confirmNewItems() {
       firing: photo.firing,
       group: "Dostawa 09.06",
       date: "2026-06-09",
+      recipe: normalizeRecipe(),
     };
   });
   state.items.push(...newItems);
