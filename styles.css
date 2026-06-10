@@ -1485,35 +1485,45 @@ h2 {
 }
 
 .material-filter-panel {
-  display: grid;
-  gap: 22px;
-  margin-bottom: 34px;
-  padding: 24px;
+  position: relative;
+  margin-bottom: 26px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 16px;
   background: rgba(255, 250, 246, 0.94);
-  box-shadow: 0 10px 32px rgba(52, 45, 35, 0.045);
+  box-shadow: 0 7px 22px rgba(52, 45, 35, 0.04);
 }
 
-.catalog-filter-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 11px;
+.catalog-filter-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
-.catalog-filter-heading h3 {
-  margin: 0;
-  font-family: Georgia, serif;
-  font-size: 21px;
-  font-weight: 500;
+.catalog-filter-path {
+  display: grid;
+  align-content: start;
+  gap: 9px;
 }
 
-.catalog-filter-heading p {
+.catalog-filter-path + .catalog-filter-path {
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+}
+
+.catalog-filter-group {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.catalog-filter-group h3 {
   margin: 0;
   color: var(--muted);
   font-size: 10px;
+  font-weight: 750;
+  line-height: 1.25;
 }
 
 .catalog-chip-list {
@@ -1551,25 +1561,12 @@ h2 {
   box-shadow: 0 5px 15px rgba(49, 95, 75, 0.18);
 }
 
-.catalog-filter-prompt {
-  padding: 14px 16px;
-  border: 1px dashed #d9d0c6;
-  border-radius: 14px;
-  color: #8a837c;
-  background: #f7f2eb;
-  font-size: 11px;
-}
-
-.catalog-filter-divider {
-  height: 1px;
-  background: var(--line);
-}
-
 .catalog-clear {
   width: auto;
-  margin: -5px auto 0 0;
-  padding-inline: 0;
+  margin: 9px 0 -2px auto;
+  padding: 0;
   color: #9a4d3d;
+  font-size: 9px;
 }
 
 .catalog-results {
@@ -3014,22 +3011,30 @@ h2 {
   }
 
   .material-filter-panel {
-    gap: 20px;
-    padding: 18px;
+    padding: 13px;
   }
 
-  .catalog-filter-heading {
-    display: block;
+  .catalog-filter-columns {
+    grid-template-columns: 1fr;
+    gap: 11px;
   }
 
-  .catalog-filter-heading p {
-    margin-top: 4px;
+  .catalog-filter-path + .catalog-filter-path {
+    padding-top: 11px;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .catalog-filter-group {
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 8px;
   }
 
   .catalog-chip {
-    min-height: 38px;
-    padding-inline: 12px;
-    font-size: 10px;
+    min-height: 40px;
+    padding-inline: 14px;
+    font-size: 11px;
   }
 
   .catalog-results-head {

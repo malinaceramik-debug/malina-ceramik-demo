@@ -796,6 +796,7 @@ function glazeCatalogView() {
     selectedClayBrands.includes(clay.brand),
   );
   const results = catalogResults();
+  const selectionSummary = catalogSelectionSummary();
   const selectionCount =
     selectedGlazeBrands.length +
     selectedGlazes.length +
@@ -822,52 +823,53 @@ function glazeCatalogView() {
       <span>Na efekt wpływają glina, liczba warstw, temperatura i miejsce w piecu.</span>
     </div>
     <section class="material-filter-panel">
-      ${catalogFilterGroup(
-        "1. Marka szkliwa",
-        "Możesz zaznaczyć kilka marek.",
-        glazeBrands,
-        selectedGlazeBrands,
-        "glaze-brand",
-      )}
-      ${
-        selectedGlazeBrands.length
-          ? catalogFilterGroup(
-              "2. Konkretne szkliwo",
-              "Doprecyzuj numer lub zostaw samą markę.",
-              visibleGlazes.map((glaze) => ({
-                value: glaze.id,
-                label: `${glaze.code} · ${glaze.name}`,
-              })),
-              selectedGlazes,
-              "glaze",
-            )
-          : catalogFilterPrompt("Najpierw wybierz markę szkliwa, aby zobaczyć dostępne numery.")
-      }
-      <div class="catalog-filter-divider"></div>
-      ${catalogFilterGroup(
-        "3. Producent gliny",
-        "Wybierz markę gliny, na której pracujesz.",
-        clayBrands,
-        selectedClayBrands,
-        "clay-brand",
-      )}
-      ${
-        selectedClayBrands.length
-          ? catalogFilterGroup(
-              "4. Konkretna glina",
-              "Wybierz numer gliny albo pozostaw samą markę.",
-              visibleClays.map((clay) => ({
-                value: clay.id,
-                label: `${clay.code} · ${clay.name}`,
-              })),
-              selectedClays,
-              "clay",
-            )
-          : catalogFilterPrompt("Po wyborze producenta pojawią się tutaj numery glin.")
-      }
+      <div class="catalog-filter-columns">
+        <div class="catalog-filter-path">
+          ${catalogFilterGroup(
+            "Marka szkliwa",
+            glazeBrands,
+            selectedGlazeBrands,
+            "glaze-brand",
+          )}
+          ${
+            selectedGlazeBrands.length
+              ? catalogFilterGroup(
+                  "Szkliwo",
+                  visibleGlazes.map((glaze) => ({
+                    value: glaze.id,
+                    label: `${glaze.code} · ${glaze.name}`,
+                  })),
+                  selectedGlazes,
+                  "glaze",
+                )
+              : ""
+          }
+        </div>
+        <div class="catalog-filter-path">
+          ${catalogFilterGroup(
+            "Marka gliny",
+            clayBrands,
+            selectedClayBrands,
+            "clay-brand",
+          )}
+          ${
+            selectedClayBrands.length
+              ? catalogFilterGroup(
+                  "Glina",
+                  visibleClays.map((clay) => ({
+                    value: clay.id,
+                    label: `${clay.code} · ${clay.name}`,
+                  })),
+                  selectedClays,
+                  "clay",
+                )
+              : ""
+          }
+        </div>
+      </div>
       ${
         selectionCount
-          ? `<button class="text-button catalog-clear" id="clear-catalog-filters" type="button">Wyczyść wszystkie filtry</button>`
+          ? `<button class="text-button catalog-clear" id="clear-catalog-filters" type="button" aria-label="Wyczyść wszystkie filtry">Wyczyść</button>`
           : ""
       }
     </section>
@@ -876,7 +878,7 @@ function glazeCatalogView() {
         <div>
           <p class="eyebrow">Realizacje z pracowni</p>
           <h2>${selectionCount ? "Wyroby pasujące do wyboru" : "Wszystkie skatalogowane wyroby"}</h2>
-          <p>${catalogSelectionSummary()}</p>
+          ${selectionSummary ? `<p>${selectionSummary}</p>` : ""}
         </div>
         <span>${results.length} ${pluralItems(results.length)}</span>
       </div>
@@ -892,16 +894,13 @@ function glazeCatalogView() {
   `;
 }
 
-function catalogFilterGroup(title, copy, options, selected, type) {
+function catalogFilterGroup(title, options, selected, type) {
   const normalizedOptions = options.map((option) =>
     typeof option === "string" ? { value: option, label: option } : option,
   );
   return `
     <div class="catalog-filter-group">
-      <div class="catalog-filter-heading">
-        <h3>${title}</h3>
-        <p>${copy}</p>
-      </div>
+      <h3>${title}</h3>
       <div class="catalog-chip-list">
         ${normalizedOptions
           .map(
@@ -912,10 +911,6 @@ function catalogFilterGroup(title, copy, options, selected, type) {
       </div>
     </div>
   `;
-}
-
-function catalogFilterPrompt(copy) {
-  return `<div class="catalog-filter-prompt">${copy}</div>`;
 }
 
 function glazeByName(name) {
@@ -983,7 +978,7 @@ function catalogSelectionSummary() {
         .join(", ")}`,
     );
   }
-  if (clayBrands.length) parts.push(`producent gliny: ${clayBrands.join(", ")}`);
+  if (clayBrands.length) parts.push(`marka gliny: ${clayBrands.join(", ")}`);
   if (clayIds.length) {
     parts.push(
       `glina: ${clayIds
@@ -992,9 +987,7 @@ function catalogSelectionSummary() {
         .join(", ")}`,
     );
   }
-  return parts.length
-    ? `Aktywne filtry: ${parts.join(" · ")}`
-    : "Wybieraj fasolki od góry, aby stopniowo zawężać wyniki.";
+  return parts.length ? `Aktywne filtry: ${parts.join(" · ")}` : "";
 }
 
 function catalogResultCard(item) {
