@@ -291,9 +291,9 @@ function studentHome() {
     </div>
 
     <div class="stats-grid">
-      ${statCard("Czeka na wypał", waiting, "waiting")}
-      ${statCard("Gotowe do odbioru", ready, "ready")}
-      ${statCard("Odebrane", collected, "archived")}
+      ${statCard("Czeka na wypał", waiting, "waiting", "waiting")}
+      ${statCard("Gotowe do odbioru", ready, "ready", "ready")}
+      ${statCard("Odebrane", collected, "archived", "collected")}
     </div>
 
     <div class="section-head">
@@ -312,15 +312,18 @@ function studentHome() {
   `;
 }
 
-function statCard(label, count, status) {
+function statCard(label, count, status, filter) {
   return `
-    <article class="stat-card">
+    <button class="stat-card" data-stat-filter="${filter}" type="button" aria-label="${label}: ${count}. Otwórz galerię">
       <div class="stat-card-top">
         <span>${label}</span>
         <i class="mini-status ${status}" aria-hidden="true"></i>
       </div>
-      <strong>${count}</strong>
-    </article>`;
+      <span class="stat-card-value">
+        <strong>${count}</strong>
+        <i class="stat-card-arrow" aria-hidden="true">→</i>
+      </span>
+    </button>`;
 }
 
 function studentItems() {
@@ -704,6 +707,16 @@ function attachViewListeners() {
   });
 
   document.querySelector("#open-add-flow")?.addEventListener("click", openAddFlow);
+
+  document.querySelectorAll("[data-stat-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.studentFilter = button.dataset.statFilter;
+      state.view = "my-items";
+      saveState();
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
 
   document.querySelectorAll("[data-student-filter]").forEach((button) => {
     button.addEventListener("click", () => {
