@@ -1526,6 +1526,26 @@ h2 {
   line-height: 1.25;
 }
 
+.catalog-brand-options {
+  display: grid;
+  gap: 8px;
+}
+
+.catalog-brand-models {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.catalog-brand-models h4 {
+  margin: 0;
+  color: var(--green-dark);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
 .catalog-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -3027,6 +3047,11 @@ h2 {
   }
 
   .catalog-filter-group {
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .catalog-brand-models {
     grid-template-columns: 68px minmax(0, 1fr);
     gap: 8px;
   }

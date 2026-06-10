@@ -789,12 +789,6 @@ function glazeCatalogView() {
     a.localeCompare(b, "pl"),
   );
   const clayBrands = [...new Set(initialClays.map((clay) => clay.brand))];
-  const visibleGlazes = initialGlazes.filter((glaze) =>
-    selectedGlazeBrands.includes(glaze.brand),
-  );
-  const visibleClays = initialClays.filter((clay) =>
-    selectedClayBrands.includes(clay.brand),
-  );
   const results = catalogResults();
   const selectionSummary = catalogSelectionSummary();
   const selectionCount =
@@ -833,12 +827,9 @@ function glazeCatalogView() {
           )}
           ${
             selectedGlazeBrands.length
-              ? catalogFilterGroup(
-                  "Szkliwo",
-                  visibleGlazes.map((glaze) => ({
-                    value: glaze.id,
-                    label: `${glaze.code} · ${glaze.name}`,
-                  })),
+              ? catalogBrandOptionGroups(
+                  selectedGlazeBrands,
+                  initialGlazes,
                   selectedGlazes,
                   "glaze",
                 )
@@ -854,12 +845,9 @@ function glazeCatalogView() {
           )}
           ${
             selectedClayBrands.length
-              ? catalogFilterGroup(
-                  "Glina",
-                  visibleClays.map((clay) => ({
-                    value: clay.id,
-                    label: `${clay.code} · ${clay.name}`,
-                  })),
+              ? catalogBrandOptionGroups(
+                  selectedClayBrands,
+                  initialClays,
                   selectedClays,
                   "clay",
                 )
@@ -894,6 +882,29 @@ function glazeCatalogView() {
   `;
 }
 
+function catalogBrandOptionGroups(brands, materials, selected, type) {
+  return `
+    <div class="catalog-brand-options">
+      ${brands
+        .map((brand) => {
+          const options = materials
+            .filter((material) => material.brand === brand)
+            .map((material) => ({
+              value: material.id,
+              label: `${material.code} · ${material.name}`,
+            }));
+          return `
+            <div class="catalog-brand-models" data-catalog-kind="${type}" data-catalog-brand-group="${escapeHtml(brand)}">
+              <h4>${escapeHtml(brand)}</h4>
+              ${catalogChipList(options, selected, type)}
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function catalogFilterGroup(title, options, selected, type) {
   const normalizedOptions = options.map((option) =>
     typeof option === "string" ? { value: option, label: option } : option,
@@ -901,14 +912,20 @@ function catalogFilterGroup(title, options, selected, type) {
   return `
     <div class="catalog-filter-group">
       <h3>${title}</h3>
-      <div class="catalog-chip-list">
-        ${normalizedOptions
-          .map(
-            (option) =>
-              `<button class="catalog-chip ${selected.includes(option.value) ? "active" : ""}" data-catalog-filter="${type}" data-catalog-value="${escapeHtml(option.value)}" type="button">${escapeHtml(option.label)}</button>`,
-          )
-          .join("")}
-      </div>
+      ${catalogChipList(normalizedOptions, selected, type)}
+    </div>
+  `;
+}
+
+function catalogChipList(options, selected, type) {
+  return `
+    <div class="catalog-chip-list">
+      ${options
+        .map(
+          (option) =>
+            `<button class="catalog-chip ${selected.includes(option.value) ? "active" : ""}" data-catalog-filter="${type}" data-catalog-value="${escapeHtml(option.value)}" type="button">${escapeHtml(option.label)}</button>`,
+        )
+        .join("")}
     </div>
   `;
 }
