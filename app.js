@@ -1708,6 +1708,11 @@ function openItemPreview(itemId) {
   const isStudentItem = state.role === "student" && item.ownerId === "anna";
   const isJournalItem = state.role === "instructor" && item.personalJournal;
   const isPersonalEntry = item.personalJournal && editable;
+  const previewItems = previewNavigationItems(item);
+  const previewIndex = previewItems.findIndex((candidate) => candidate.id === item.id);
+  const previousItem = previewItems[(previewIndex - 1 + previewItems.length) % previewItems.length];
+  const nextItem = previewItems[(previewIndex + 1) % previewItems.length];
+  const canNavigate = previewItems.length > 1;
   const canAddFinal =
     editable &&
     (item.status === "ready" ||
@@ -1716,51 +1721,56 @@ function openItemPreview(itemId) {
   const label = visibleItemLabel(item);
   const finalImages = normalizeFinalImages(item.finalImages);
   const previewImage = displayItemImage(item);
+  recipeDraft = {
+    itemId,
+    ...structuredClone(normalizeRecipe(item.recipe)),
+  };
   const modal = document.querySelector("#modal");
   modal.innerHTML = `
-    <div class="modal-head preview-modal-head">
+    <div class="modal-head preview-modal-head compact">
       <div>
         <p class="eyebrow">${isPersonalEntry ? "Prywatny dziennik ceramiczny" : isStudentItem ? "Twój wyrób" : `Wyrób ${itemCode(item)}`}</p>
         <h2 id="modal-title">${label}</h2>
       </div>
       <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
     </div>
-    <div class="item-preview-photo firing-${item.firing}">
-      <img src="${previewImage}" alt="${label}, wyrób: ${item.owner}" />
-      <span class="preview-firing-badge ${item.firing}">${firingLabel(item.firing)}</span>
-      ${finalImages.length ? '<span class="preview-final-badge">Najnowszy efekt finalny</span>' : ""}
+    <div class="preview-photo-stage">
+      ${
+        canNavigate
+          ? `<button class="preview-nav-arrow previous" data-preview-item="${previousItem.id}" type="button" aria-label="Poprzedni wyrób">‹</button>`
+          : ""
+      }
+      <div class="item-preview-photo firing-${item.firing}" id="preview-swipe-area">
+        <img id="preview-main-image" src="${previewImage}" alt="${label}, wyrób: ${item.owner}" />
+        <div class="preview-history-strip">
+          <strong>Historia tej konkretnej rzeczy</strong>
+          <span>${previewHistoryLine(item, isPersonalEntry)}</span>
+        </div>
+        <div class="preview-photo-badges">
+          <span class="preview-firing-badge ${item.firing}">${firingLabel(item.firing)}</span>
+          <span class="status-pill ${item.status}">${isPersonalEntry ? journalStageLabel(item.journalStage) : statusLabel(item.status)}</span>
+        </div>
+        ${previewPhotoDock(item, canAddFinal)}
+      </div>
+      ${
+        canNavigate
+          ? `<button class="preview-nav-arrow next" data-preview-item="${nextItem.id}" type="button" aria-label="Następny wyrób">›</button>`
+          : ""
+      }
     </div>
     <div class="item-preview-details">
-      ${
-        isStudentItem || isJournalItem
-          ? `<div class="student-item-intro">
-               <strong>Historia tej konkretnej rzeczy</strong>
-               <span>${isPersonalEntry ? `${formatFullDate(item.date)} · prywatny wpis w dzienniku` : `${item.group} · numer pomocniczy pracowni ${itemCode(item)}`}</span>
-             </div>`
-          : `<div class="preview-owner">
-               <span class="avatar">${item.owner
-                 .split(" ")
-                 .map((part) => part[0])
-                 .join("")}</span>
-               <div><strong>${item.owner}</strong><small>${item.group}</small></div>
-             </div>`
-      }
-      <div class="preview-facts">
-        <div><small>Status</small><strong>${isPersonalEntry ? journalStageLabel(item.journalStage) : statusLabel(item.status)}</strong></div>
-        <div><small>Wypał</small><strong>${firingLabel(item.firing)}</strong></div>
-        <div><small>${isJournalItem ? "Dodano" : "Przyniesiono"}</small><strong>${formatDate(item.date)}</strong></div>
-      </div>
-      ${finalEffectSection(item, canAddFinal)}
-      ${recipeSummary(item)}
+      ${editable ? inlineRecipeEditor(item) : recipeSummary(item)}
       ${(isStudentItem || isJournalItem) && editable ? sharingSection(item) : ""}
     </div>
     <div class="modal-foot preview-modal-foot">
       <button class="secondary-button close-modal" type="button">Zamknij podgląd</button>
       ${isPersonalEntry && item.journalStage !== "finished" ? '<button class="secondary-button" id="mark-journal-finished" type="button">Oznacz jako gotowy</button>' : ""}
-      ${editable ? '<button class="primary-button" id="edit-recipe" type="button">Edytuj notatkę zdobienia</button>' : ""}
+      ${editable ? '<button class="primary-button" id="save-inline-recipe" type="button">Zapisz notatkę</button>' : ""}
     </div>`;
   modal.querySelectorAll(".close-modal").forEach((button) => button.addEventListener("click", closeModal));
-  modal.querySelector("#edit-recipe")?.addEventListener("click", () => openRecipeEditor(itemId));
+  modal.querySelectorAll("[data-preview-item]").forEach((button) => {
+    button.addEventListener("click", () => openItemPreview(Number(button.dataset.previewItem)));
+  });
   modal.querySelector("#mark-journal-finished")?.addEventListener("click", () => {
     state.items = state.items.map((candidate) =>
       candidate.id === itemId
@@ -1775,12 +1785,14 @@ function openItemPreview(itemId) {
     finalPhotoTargetId = itemId;
     document.querySelector("#final-photo-input").click();
   });
+  modal.querySelectorAll("[data-preview-image]").forEach((button) => {
+    button.addEventListener("click", () => selectPreviewImage(button.dataset.previewImage, button));
+  });
   modal.querySelectorAll("[data-demo-final-image]").forEach((button) => {
     button.addEventListener("click", () => addFinalImages(itemId, [button.dataset.demoFinalImage]));
   });
-  modal.querySelectorAll("[data-remove-final-image]").forEach((button) => {
-    button.addEventListener("click", () => removeFinalImage(itemId, button.dataset.removeFinalImage));
-  });
+  attachInlineRecipeListeners(item);
+  attachPreviewSwipe(itemId, previousItem?.id, nextItem?.id, canNavigate);
   modal.querySelector("#toggle-share-combination")?.addEventListener("click", () => {
     updateItemSharing(itemId, (sharing) => ({
       ...sharing,
@@ -1803,6 +1815,118 @@ function openItemPreview(itemId) {
     });
   });
   openModal();
+}
+
+function previewNavigationItems(item) {
+  const ownerId = state.role === "student" ? "anna" : item.ownerId;
+  const items = state.items
+    .filter((candidate) => candidate.ownerId === ownerId)
+    .filter((candidate) =>
+      item.personalJournal
+        ? candidate.personalJournal
+        : state.view === "combinations"
+          ? candidate.personalJournal ||
+            recipeCategories.some(
+              (category) => normalizeRecipe(candidate.recipe)[category.id].length,
+            ) ||
+            normalizeRecipe(candidate.recipe).note
+          : !candidate.personalJournal,
+    )
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  return items.length ? items : [item];
+}
+
+function previewHistoryLine(item, isPersonalEntry) {
+  if (isPersonalEntry) {
+    return `${formatFullDate(item.date)} · ${journalStageLabel(item.journalStage)} · prywatny wpis`;
+  }
+  if (state.role === "student" && item.ownerId === "anna") {
+    return `${item.group} · ${firingLabel(item.firing)} · numer pomocniczy pracowni ${itemCode(item)}`;
+  }
+  return `${item.owner} · ${item.group} · ${formatFullDate(item.date)}`;
+}
+
+function previewPhotoDock(item, canAddFinal) {
+  const finalImages = normalizeFinalImages(item.finalImages);
+  if (!finalImages.length) {
+    return canAddFinal
+      ? `<div class="preview-photo-dock empty">
+          <button class="preview-add-photo" id="add-final-photo" type="button">
+            <span>+</span><strong>Dodaj zdjęcie po wypale</strong>
+          </button>
+          ${previewDemoPhotoButtons()}
+        </div>`
+      : "";
+  }
+  return `
+    <div class="preview-photo-dock">
+      <button class="preview-thumb" data-preview-image="${item.image}" type="button">
+        <img src="${item.image}" alt="" /><span>Przed wypałem</span>
+      </button>
+      ${finalImages
+        .map(
+          (entry, index) => `
+            <button class="preview-thumb ${index === finalImages.length - 1 ? "active" : ""}" data-preview-image="${entry.image}" type="button">
+              <img src="${entry.image}" alt="" /><span>Efekt ${index + 1}</span>
+            </button>`,
+        )
+        .join("")}
+      ${
+        canAddFinal
+          ? `<button class="preview-add-more" id="add-final-photo" type="button" aria-label="Dodaj kolejne zdjęcie po wypale">+</button>
+             ${previewDemoPhotoButtons()}`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function previewDemoPhotoButtons() {
+  return `
+    <div class="preview-demo-photos" aria-label="Przykładowe zdjęcia w wersji demo">
+      ${["kubek", "miska", "talerz", "wazon"]
+        .map(
+          (name) =>
+            `<button data-demo-final-image="assets/${name}.webp" type="button" aria-label="Dodaj finalne zdjęcie: ${name}"><img src="assets/${name}.webp" alt="" /></button>`,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function selectPreviewImage(image, selectedButton) {
+  const mainImage = document.querySelector("#preview-main-image");
+  if (!mainImage) return;
+  mainImage.src = image;
+  document.querySelectorAll(".preview-thumb").forEach((button) => {
+    button.classList.toggle("active", button === selectedButton);
+  });
+}
+
+function attachPreviewSwipe(itemId, previousId, nextId, canNavigate) {
+  if (!canNavigate) return;
+  const area = document.querySelector("#preview-swipe-area");
+  if (!area) return;
+  let startX = 0;
+  let startY = 0;
+  area.addEventListener(
+    "touchstart",
+    (event) => {
+      startX = event.changedTouches[0].clientX;
+      startY = event.changedTouches[0].clientY;
+    },
+    { passive: true },
+  );
+  area.addEventListener(
+    "touchend",
+    (event) => {
+      const deltaX = event.changedTouches[0].clientX - startX;
+      const deltaY = event.changedTouches[0].clientY - startY;
+      if (Math.abs(deltaX) < 55 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+      openItemPreview(deltaX > 0 ? previousId : nextId);
+    },
+    { passive: true },
+  );
 }
 
 function finalEffectSection(item, canAddFinal) {
@@ -1930,6 +2054,150 @@ function recipeSummary(item) {
       }
     </section>
   `;
+}
+
+function inlineRecipeEditor(item) {
+  return `
+    <section class="inline-recipe">
+      <div class="inline-recipe-head">
+        <div>
+          <small>Mój dziennik wyrobu</small>
+          <h3>Jak powstał ten efekt?</h3>
+        </div>
+        <span>Zmiany zapisujesz przyciskiem na dole</span>
+      </div>
+      <div class="inline-recipe-categories">
+        ${recipeCategories.map(inlineRecipeCategory).join("")}
+      </div>
+      <label class="recipe-note-field inline-note-field">
+        <span>Krótka notatka</span>
+        <textarea id="inline-recipe-note" rows="3" placeholder="np. 3 cienkie warstwy, nakładane pędzlem">${escapeHtml(recipeDraft.note)}</textarea>
+      </label>
+    </section>
+  `;
+}
+
+function inlineRecipeCategory(category) {
+  const options = [
+    ...materialOptions[category.id],
+    ...(state.customMaterialOptions?.[category.id] || []),
+  ];
+  return `
+    <fieldset class="inline-recipe-category" data-inline-category="${category.id}">
+      <legend>${category.label}</legend>
+      <div class="recipe-chip-list">
+        ${[...new Set(options)]
+          .map(
+            (option) =>
+              `<button class="recipe-chip ${recipeDraft[category.id].includes(option) ? "active" : ""}" data-inline-recipe-option="${escapeHtml(option)}" data-inline-recipe-category="${category.id}" type="button" aria-pressed="${recipeDraft[category.id].includes(option)}">${escapeHtml(option)}</button>`,
+          )
+          .join("")}
+        <button class="recipe-chip custom-add-chip" data-expand-inline-custom="${category.id}" type="button">+ Dodaj</button>
+      </div>
+      <div class="inline-custom-form" data-inline-custom-form="${category.id}">
+        <input class="input" data-inline-custom-brand="${category.id}" type="text" placeholder="Marka / producent" />
+        <input class="input" data-inline-custom-name="${category.id}" type="text" placeholder="Nazwa / numer" />
+        <button class="secondary-button" data-save-inline-custom="${category.id}" type="button">Dodaj fasolkę</button>
+      </div>
+    </fieldset>
+  `;
+}
+
+function attachInlineRecipeListeners(item) {
+  document.querySelectorAll("[data-inline-recipe-option]").forEach(bindInlineRecipeOption);
+  document.querySelectorAll("[data-expand-inline-custom]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const category = button.dataset.expandInlineCustom;
+      const form = document.querySelector(`[data-inline-custom-form="${category}"]`);
+      form?.classList.toggle("expanded");
+      form?.querySelector("input")?.focus();
+    });
+  });
+  document.querySelectorAll("[data-save-inline-custom]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const category = button.dataset.saveInlineCustom;
+      const brand = document
+        .querySelector(`[data-inline-custom-brand="${category}"]`)
+        ?.value.trim();
+      const name = document
+        .querySelector(`[data-inline-custom-name="${category}"]`)
+        ?.value.trim();
+      const value = [brand, name].filter(Boolean).join(" · ");
+      if (!value) return;
+      const config = recipeCategories.find((candidate) => candidate.id === category);
+      if (!state.customMaterialOptions[category].includes(value)) {
+        state.customMaterialOptions[category].push(value);
+      }
+      recipeDraft[category] = config.multiple
+        ? [...new Set([...recipeDraft[category], value])]
+        : [value];
+      saveState();
+      const fieldset = button.closest(".inline-recipe-category");
+      if (!config.multiple) {
+        fieldset?.querySelectorAll("[data-inline-recipe-option]").forEach((candidate) => {
+          candidate.classList.remove("active");
+          candidate.setAttribute("aria-pressed", "false");
+        });
+      }
+      const addChip = fieldset?.querySelector(".custom-add-chip");
+      const newChip = document.createElement("button");
+      newChip.className = "recipe-chip active";
+      newChip.type = "button";
+      newChip.textContent = value;
+      newChip.dataset.inlineRecipeOption = value;
+      newChip.dataset.inlineRecipeCategory = category;
+      newChip.setAttribute("aria-pressed", "true");
+      fieldset?.querySelector(".recipe-chip-list")?.insertBefore(newChip, addChip || null);
+      bindInlineRecipeOption(newChip);
+      fieldset?.querySelector(".inline-custom-form")?.classList.remove("expanded");
+      showToast("Nowa fasolka została dodana.");
+    });
+  });
+  document.querySelector("#save-inline-recipe")?.addEventListener("click", () => {
+    const note = document.querySelector("#inline-recipe-note")?.value.trim() || "";
+    state.items = state.items.map((candidate) =>
+      candidate.id === item.id
+        ? {
+            ...candidate,
+            recipe: {
+              clay: recipeDraft.clay,
+              glazes: recipeDraft.glazes,
+              paints: recipeDraft.paints,
+              temperature: recipeDraft.temperature,
+              note,
+            },
+          }
+        : candidate,
+    );
+    saveState();
+    openItemPreview(item.id);
+    showToast("Notatka wyrobu została zapisana.");
+  });
+}
+
+function bindInlineRecipeOption(button) {
+  button.addEventListener("click", () => {
+    const category = button.dataset.inlineRecipeCategory;
+    const value = button.dataset.inlineRecipeOption;
+    const config = recipeCategories.find((candidate) => candidate.id === category);
+    const selected = recipeDraft[category].includes(value);
+    if (config.multiple) {
+      recipeDraft[category] = selected
+        ? recipeDraft[category].filter((candidate) => candidate !== value)
+        : [...recipeDraft[category], value];
+      button.classList.toggle("active", !selected);
+      button.setAttribute("aria-pressed", String(!selected));
+    } else {
+      recipeDraft[category] = selected ? [] : [value];
+      document
+        .querySelectorAll(`[data-inline-recipe-category="${category}"]`)
+        .forEach((candidate) => {
+          const active = !selected && candidate.dataset.inlineRecipeOption === value;
+          candidate.classList.toggle("active", active);
+          candidate.setAttribute("aria-pressed", String(active));
+        });
+    }
+  });
 }
 
 function sharingSection(item) {
