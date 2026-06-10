@@ -15,8 +15,9 @@ const initialGlazes = [
   {
     id: "lesna-zielen",
     name: "Leśna zieleń",
-    maker: "Szkliwo pracowni",
-    code: "SZ-12",
+    brand: "Botz",
+    maker: "Botz",
+    code: "9870",
     image: "assets/talerz.webp",
     color: "#66785f",
     finish: "Błyszczące",
@@ -28,8 +29,9 @@ const initialGlazes = [
   {
     id: "kobaltowy-deszcz",
     name: "Kobaltowy deszcz",
-    maker: "Szkliwo pracowni",
-    code: "SZ-07",
+    brand: "Amaco",
+    maker: "Amaco",
+    code: "PC-27",
     image: "assets/miska.webp",
     color: "#496779",
     finish: "Efektowe",
@@ -41,8 +43,9 @@ const initialGlazes = [
   {
     id: "malinowy-pyl",
     name: "Malinowy pył",
-    maker: "Szkliwo pracowni",
-    code: "SZ-19",
+    brand: "Amaco",
+    maker: "Amaco",
+    code: "PC-59",
     image: "assets/kubek.webp",
     color: "#a46662",
     finish: "Satynowe",
@@ -54,8 +57,9 @@ const initialGlazes = [
   {
     id: "miodowy",
     name: "Miodowy",
-    maker: "Szkliwo pracowni",
-    code: "SZ-03",
+    brand: "Botz",
+    maker: "Botz",
+    code: "9472",
     image: "assets/wazon.webp",
     color: "#a06f38",
     finish: "Błyszczące",
@@ -64,6 +68,13 @@ const initialGlazes = [
     description: "Ciepłe, transparentne szkliwo podkreślające ślady dłoni i rysunek gliny.",
     notes: "Dobrze wygląda na reliefach i odciśniętych wzorach.",
   },
+];
+
+const initialClays = [
+  { id: "gs-254", brand: "G&S", code: "254", name: "Jasna kamionka" },
+  { id: "gs-376", brand: "G&S", code: "376", name: "Czerwona kamionka" },
+  { id: "silbeco-k12", brand: "Silbeco", code: "K-12", name: "Beżowa kamionka" },
+  { id: "silbeco-11", brand: "Silbeco", code: "11", name: "Jasna glina" },
 ];
 
 const materialOptions = {
@@ -252,7 +263,10 @@ const initialState = {
   studentFilter: "all",
   instructorStatus: "all",
   instructorFiring: "all",
-  glazeFilter: "all",
+  catalogGlazeBrands: [],
+  catalogGlazes: [],
+  catalogClayBrands: [],
+  catalogClays: [],
   search: "",
   selected: [],
   items: initialItems,
@@ -767,10 +781,26 @@ function instructorJournalView() {
 }
 
 function glazeCatalogView() {
-  const filters = ["all", "Błyszczące", "Satynowe", "Efektowe"];
-  const glazes = initialGlazes.filter(
-    (glaze) => state.glazeFilter === "all" || glaze.finish === state.glazeFilter,
+  const selectedGlazeBrands = state.catalogGlazeBrands || [];
+  const selectedGlazes = state.catalogGlazes || [];
+  const selectedClayBrands = state.catalogClayBrands || [];
+  const selectedClays = state.catalogClays || [];
+  const glazeBrands = [...new Set(initialGlazes.map((glaze) => glaze.brand))].sort((a, b) =>
+    a.localeCompare(b, "pl"),
   );
+  const clayBrands = [...new Set(initialClays.map((clay) => clay.brand))];
+  const visibleGlazes = initialGlazes.filter((glaze) =>
+    selectedGlazeBrands.includes(glaze.brand),
+  );
+  const visibleClays = initialClays.filter((clay) =>
+    selectedClayBrands.includes(clay.brand),
+  );
+  const results = catalogResults();
+  const selectionCount =
+    selectedGlazeBrands.length +
+    selectedGlazes.length +
+    selectedClayBrands.length +
+    selectedClays.length;
 
   return `
     <div class="page-head catalog-page-head">
@@ -791,46 +821,205 @@ function glazeCatalogView() {
       <strong>Każdy wypał może wyglądać trochę inaczej.</strong>
       <span>Na efekt wpływają glina, liczba warstw, temperatura i miejsce w piecu.</span>
     </div>
-    <div class="filter-row catalog-filters">
-      ${filters
-        .map(
-          (filter) =>
-            `<button class="filter-chip ${state.glazeFilter === filter ? "active" : ""}" data-glaze-filter="${filter}" type="button">${filter === "all" ? "Wszystkie" : filter}</button>`,
-        )
-        .join("")}
-    </div>
-    <div class="glaze-grid">
-      ${glazes.map(glazeCard).join("")}
+    <section class="material-filter-panel">
+      ${catalogFilterGroup(
+        "1. Marka szkliwa",
+        "Możesz zaznaczyć kilka marek.",
+        glazeBrands,
+        selectedGlazeBrands,
+        "glaze-brand",
+      )}
+      ${
+        selectedGlazeBrands.length
+          ? catalogFilterGroup(
+              "2. Konkretne szkliwo",
+              "Doprecyzuj numer lub zostaw samą markę.",
+              visibleGlazes.map((glaze) => ({
+                value: glaze.id,
+                label: `${glaze.code} · ${glaze.name}`,
+              })),
+              selectedGlazes,
+              "glaze",
+            )
+          : catalogFilterPrompt("Najpierw wybierz markę szkliwa, aby zobaczyć dostępne numery.")
+      }
+      <div class="catalog-filter-divider"></div>
+      ${catalogFilterGroup(
+        "3. Producent gliny",
+        "Wybierz markę gliny, na której pracujesz.",
+        clayBrands,
+        selectedClayBrands,
+        "clay-brand",
+      )}
+      ${
+        selectedClayBrands.length
+          ? catalogFilterGroup(
+              "4. Konkretna glina",
+              "Wybierz numer gliny albo pozostaw samą markę.",
+              visibleClays.map((clay) => ({
+                value: clay.id,
+                label: `${clay.code} · ${clay.name}`,
+              })),
+              selectedClays,
+              "clay",
+            )
+          : catalogFilterPrompt("Po wyborze producenta pojawią się tutaj numery glin.")
+      }
+      ${
+        selectionCount
+          ? `<button class="text-button catalog-clear" id="clear-catalog-filters" type="button">Wyczyść wszystkie filtry</button>`
+          : ""
+      }
+    </section>
+    <section class="catalog-results">
+      <div class="catalog-results-head">
+        <div>
+          <p class="eyebrow">Realizacje z pracowni</p>
+          <h2>${selectionCount ? "Wyroby pasujące do wyboru" : "Wszystkie skatalogowane wyroby"}</h2>
+          <p>${catalogSelectionSummary()}</p>
+        </div>
+        <span>${results.length} ${pluralItems(results.length)}</span>
+      </div>
+      ${
+        results.length
+          ? `<div class="catalog-results-grid">${results.map(catalogResultCard).join("")}</div>`
+          : emptyState(
+              "Nie mamy jeszcze takiej kombinacji",
+              "W katalogu nie ma wyrobu spełniającego wszystkie zaznaczone warunki. Zmień jedną z fasolek albo wyczyść filtry.",
+            )
+      }
+    </section>
+  `;
+}
+
+function catalogFilterGroup(title, copy, options, selected, type) {
+  const normalizedOptions = options.map((option) =>
+    typeof option === "string" ? { value: option, label: option } : option,
+  );
+  return `
+    <div class="catalog-filter-group">
+      <div class="catalog-filter-heading">
+        <h3>${title}</h3>
+        <p>${copy}</p>
+      </div>
+      <div class="catalog-chip-list">
+        ${normalizedOptions
+          .map(
+            (option) =>
+              `<button class="catalog-chip ${selected.includes(option.value) ? "active" : ""}" data-catalog-filter="${type}" data-catalog-value="${escapeHtml(option.value)}" type="button">${escapeHtml(option.label)}</button>`,
+          )
+          .join("")}
+      </div>
     </div>
   `;
 }
 
-function glazeCard(glaze) {
-  const examples = state.items.filter((item) =>
-    normalizeRecipe(item.recipe).glazes.includes(glaze.name),
-  ).length;
+function catalogFilterPrompt(copy) {
+  return `<div class="catalog-filter-prompt">${copy}</div>`;
+}
+
+function glazeByName(name) {
+  return initialGlazes.find((glaze) => glaze.name === name);
+}
+
+function clayByName(name) {
+  return initialClays.find((clay) => clay.name === name);
+}
+
+function catalogResults() {
+  const glazeBrands = state.catalogGlazeBrands || [];
+  const glazeIds = state.catalogGlazes || [];
+  const clayBrands = state.catalogClayBrands || [];
+  const clayIds = state.catalogClays || [];
+
+  return state.items
+    .filter((item) => {
+      const recipe = normalizeRecipe(item.recipe);
+      return (
+        recipe.glazes.length &&
+        recipe.clay.length &&
+        normalizeFinalImages(item.finalImages).length
+      );
+    })
+    .filter((item) => {
+      const recipe = normalizeRecipe(item.recipe);
+      const itemGlazes = recipe.glazes.map(glazeByName).filter(Boolean);
+      const itemClays = recipe.clay.map(clayByName).filter(Boolean);
+      if (
+        glazeBrands.length &&
+        !itemGlazes.some((glaze) => glazeBrands.includes(glaze.brand))
+      ) {
+        return false;
+      }
+      if (glazeIds.length && !itemGlazes.some((glaze) => glazeIds.includes(glaze.id))) {
+        return false;
+      }
+      if (
+        clayBrands.length &&
+        !itemClays.some((clay) => clayBrands.includes(clay.brand))
+      ) {
+        return false;
+      }
+      if (clayIds.length && !itemClays.some((clay) => clayIds.includes(clay.id))) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function catalogSelectionSummary() {
+  const parts = [];
+  const glazeBrands = state.catalogGlazeBrands || [];
+  const glazeIds = state.catalogGlazes || [];
+  const clayBrands = state.catalogClayBrands || [];
+  const clayIds = state.catalogClays || [];
+  if (glazeBrands.length) parts.push(`marka szkliwa: ${glazeBrands.join(", ")}`);
+  if (glazeIds.length) {
+    parts.push(
+      `szkliwo: ${glazeIds
+        .map((id) => initialGlazes.find((glaze) => glaze.id === id)?.code)
+        .filter(Boolean)
+        .join(", ")}`,
+    );
+  }
+  if (clayBrands.length) parts.push(`producent gliny: ${clayBrands.join(", ")}`);
+  if (clayIds.length) {
+    parts.push(
+      `glina: ${clayIds
+        .map((id) => initialClays.find((clay) => clay.id === id)?.code)
+        .filter(Boolean)
+        .join(", ")}`,
+    );
+  }
+  return parts.length
+    ? `Aktywne filtry: ${parts.join(" · ")}`
+    : "Wybieraj fasolki od góry, aby stopniowo zawężać wyniki.";
+}
+
+function catalogResultCard(item) {
+  const recipe = normalizeRecipe(item.recipe);
+  const glazeLabels = recipe.glazes
+    .map(glazeByName)
+    .filter(Boolean)
+    .map((glaze) => `${glaze.brand} ${glaze.code}`);
+  const clayLabels = recipe.clay
+    .map(clayByName)
+    .filter(Boolean)
+    .map((clay) => `${clay.brand} ${clay.code}`);
   return `
-    <button class="glaze-card" data-glaze-id="${glaze.id}" type="button">
-      <div class="glaze-photo">
-        <img src="${glaze.image}" alt="Przykład szkliwa ${glaze.name}" />
-        <span class="glaze-swatch" style="--swatch: ${glaze.color}" aria-hidden="true"></span>
-        <span class="glaze-finish">${glaze.finish}</span>
-      </div>
-      <div class="glaze-card-body">
-        <div class="glaze-title-row">
-          <div>
-            <small>${glaze.maker} · ${glaze.code}</small>
-            <h2>${glaze.name}</h2>
-          </div>
-          <span aria-hidden="true">→</span>
+    <article class="catalog-result-card">
+      <img src="${displayItemImage(item)}" alt="Skatalogowany wyrób z pracowni" />
+      <div class="catalog-result-body">
+        <span class="catalog-result-source">Realizacja z pracowni</span>
+        <h3>${item.name || `Wyrób z ${formatFullDate(item.date)}`}</h3>
+        <div class="catalog-result-tags">
+          ${glazeLabels.map((label) => `<span class="glaze-tag">${label}</span>`).join("")}
+          ${clayLabels.map((label) => `<span class="clay-tag">${label}</span>`).join("")}
         </div>
-        <p>${glaze.description}</p>
-        <div class="glaze-card-meta">
-          <span>${glaze.temperature}</span>
-          <span>${examples} ${examples === 1 ? "przykład" : "przykłady"}</span>
-        </div>
+        <p>${recipe.note ? escapeHtml(recipe.note) : "Skatalogowany przykład efektu po wypale."}</p>
       </div>
-    </button>
+    </article>
   `;
 }
 
@@ -1139,16 +1328,21 @@ function attachViewListeners() {
     });
   });
 
-  document.querySelectorAll("[data-glaze-filter]").forEach((button) => {
+  document.querySelectorAll("[data-catalog-filter]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.glazeFilter = button.dataset.glazeFilter;
+      toggleCatalogFilter(button.dataset.catalogFilter, button.dataset.catalogValue);
       saveState();
       render();
     });
   });
 
-  document.querySelectorAll("[data-glaze-id]").forEach((button) => {
-    button.addEventListener("click", () => openGlazePreview(button.dataset.glazeId));
+  document.querySelector("#clear-catalog-filters")?.addEventListener("click", () => {
+    state.catalogGlazeBrands = [];
+    state.catalogGlazes = [];
+    state.catalogClayBrands = [];
+    state.catalogClays = [];
+    saveState();
+    render();
   });
 
   attachGalleryInteractions();
@@ -1202,6 +1396,34 @@ function attachViewListeners() {
       render();
     });
   });
+}
+
+function toggleCatalogFilter(type, value) {
+  const stateKeys = {
+    "glaze-brand": "catalogGlazeBrands",
+    glaze: "catalogGlazes",
+    "clay-brand": "catalogClayBrands",
+    clay: "catalogClays",
+  };
+  const key = stateKeys[type];
+  if (!key) return;
+  const current = state[key] || [];
+  state[key] = current.includes(value)
+    ? current.filter((candidate) => candidate !== value)
+    : [...current, value];
+
+  if (type === "glaze-brand") {
+    state.catalogGlazes = (state.catalogGlazes || []).filter((id) => {
+      const glaze = initialGlazes.find((candidate) => candidate.id === id);
+      return glaze && state.catalogGlazeBrands.includes(glaze.brand);
+    });
+  }
+  if (type === "clay-brand") {
+    state.catalogClays = (state.catalogClays || []).filter((id) => {
+      const clay = initialClays.find((candidate) => candidate.id === id);
+      return clay && state.catalogClayBrands.includes(clay.brand);
+    });
+  }
 }
 
 function attachGalleryInteractions() {
