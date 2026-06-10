@@ -110,6 +110,9 @@ const initialItems = [
     group: "Dostawa 28.05",
     date: "2026-05-28",
     firedAt: "2026-06-08",
+    finalImages: [
+      { id: "final-2-1", image: "assets/talerz.webp", date: "2026-06-09" },
+    ],
     recipe: {
       clay: ["Jasna kamionka"],
       glazes: ["Kobaltowy deszcz"],
@@ -184,12 +187,61 @@ const initialItems = [
     group: "Dostawa 12.05",
     date: "2026-05-12",
     firedAt: "2026-05-22",
+    finalImages: [
+      { id: "final-6-1", image: "assets/miska.webp", date: "2026-05-23" },
+      { id: "final-6-2", image: "assets/talerz.webp", date: "2026-05-24" },
+    ],
     recipe: {
       clay: ["Jasna kamionka"],
       glazes: ["Leśna zieleń"],
       paints: [],
       temperature: ["1240°C"],
       note: "Dwie warstwy. Na rancie kolor wyszedł jaśniejszy.",
+    },
+  },
+  {
+    id: 101,
+    name: "Próba zieleni na czarce",
+    owner: "Marta Wiśniewska",
+    ownerId: "marta",
+    image: "assets/kubek.webp",
+    status: "collected",
+    firing: "glaze",
+    group: "Dziennik instruktora",
+    date: "2026-05-18",
+    firedAt: "2026-05-26",
+    personalJournal: true,
+    journalStage: "finished",
+    finalImages: [
+      { id: "final-101-1", image: "assets/talerz.webp", date: "2026-05-27" },
+    ],
+    recipe: {
+      clay: ["Jasna kamionka"],
+      glazes: ["Leśna zieleń"],
+      paints: [],
+      temperature: ["1240°C"],
+      note: "Dwie warstwy. Cieńsza warstwa na rancie dała jaśniejszy efekt.",
+    },
+  },
+  {
+    id: 102,
+    name: "Wazon z próbą angoby",
+    owner: "Marta Wiśniewska",
+    ownerId: "marta",
+    image: "assets/wazon.webp",
+    status: "waiting",
+    firing: "glaze",
+    group: "Dziennik instruktora",
+    date: "2026-06-06",
+    personalJournal: true,
+    journalStage: "making",
+    finalImages: [],
+    recipe: {
+      clay: ["Czerwona kamionka"],
+      glazes: [],
+      paints: ["Biała angoba"],
+      temperature: ["1220°C"],
+      note: "Angoba nakładana gąbką na podsuszoną glinę.",
     },
   },
 ];
@@ -236,21 +288,37 @@ let addFlow = {
   photos: [],
 };
 let recipeDraft = null;
+let finalPhotoTargetId = null;
+let journalDraft = null;
 let toastTimer;
 
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!saved) return structuredClone(initialState);
-    const items = (saved.items || initialItems).map((item) => {
+    let items = (saved.items || initialItems).map((item) => {
       const normalized = {
         ...item,
         code: item.code || `MC-${String(item.id).padStart(4, "0")}`,
         recipe: normalizeRecipe(item.recipe),
+        finalImages: normalizeFinalImages(item.finalImages),
       };
       if (/^Wyrób \d+$/.test(normalized.name || "")) delete normalized.name;
       return normalized;
     });
+    if (!items.some((item) => item.personalJournal)) {
+      items = [
+        ...items,
+        ...initialItems
+          .filter((item) => item.personalJournal)
+          .map((item) => ({
+            ...structuredClone(item),
+            code: `MC-${String(item.id).padStart(4, "0")}`,
+            recipe: normalizeRecipe(item.recipe),
+            finalImages: normalizeFinalImages(item.finalImages),
+          })),
+      ];
+    }
     return { ...initialState, ...saved, items };
   } catch {
     return structuredClone(initialState);
@@ -271,6 +339,16 @@ function normalizeRecipe(recipe = {}) {
   };
 }
 
+function normalizeFinalImages(images = []) {
+  return Array.isArray(images)
+    ? images.map((entry, index) =>
+        typeof entry === "string"
+          ? { id: `legacy-${index}`, image: entry, date: "2026-06-10" }
+          : entry,
+      )
+    : [];
+}
+
 function icon(name) {
   return `<span class="nav-icon" aria-hidden="true">${icons[name] || icons.home}</span>`;
 }
@@ -288,6 +366,7 @@ function navItems() {
   return [
     { id: "gallery", label: "Do wypału", icon: "gallery" },
     { id: "glazes", label: "Katalog szkliw", icon: "palette" },
+    { id: "journal", label: "Mój dziennik", icon: "archive" },
     { id: "settlements", label: "Rozliczenia", icon: "money" },
     { id: "clients", label: "Kursanci", icon: "users" },
     { id: "archive", label: "Archiwum", icon: "archive" },
@@ -319,9 +398,22 @@ function studentItemLabel(item) {
 }
 
 function visibleItemLabel(item) {
+  if (item.personalJournal) return item.name || `Wpis z ${formatFullDate(item.date)}`;
   return state.role === "student" && item.ownerId === "anna"
     ? studentItemLabel(item)
     : itemCode(item);
+}
+
+function displayItemImage(item) {
+  const finalImages = normalizeFinalImages(item.finalImages);
+  return finalImages.length ? finalImages[finalImages.length - 1].image : item.image;
+}
+
+function canEditItem(item) {
+  return (
+    (state.role === "student" && item.ownerId === "anna") ||
+    (state.role === "instructor" && item.personalJournal && item.ownerId === "marta")
+  );
 }
 
 function firingLegend() {
@@ -408,6 +500,7 @@ function render() {
   } else {
     if (state.view === "gallery") content.innerHTML = instructorGallery();
     else if (state.view === "glazes") content.innerHTML = glazeCatalogView();
+    else if (state.view === "journal") content.innerHTML = instructorJournalView();
     else if (state.view === "settlements") content.innerHTML = settlementsView();
     else if (state.view === "clients") content.innerHTML = clientsView();
     else content.innerHTML = instructorArchive();
@@ -570,6 +663,7 @@ function itemCard(item, selectable) {
   const selected = state.selected.includes(item.id);
   const label = visibleItemLabel(item);
   const isStudentItem = state.role === "student" && item.ownerId === "anna";
+  const isJournalItem = state.role === "instructor" && item.personalJournal;
   const groupItems = state.items
     .filter((candidate) => candidate.ownerId === item.ownerId && candidate.group === item.group)
     .sort((a, b) => a.id - b.id);
@@ -578,24 +672,35 @@ function itemCard(item, selectable) {
     (count, category) => count + normalizeRecipe(item.recipe)[category.id].length,
     0,
   );
+  const finalImages = normalizeFinalImages(item.finalImages);
+  const cardImage = displayItemImage(item);
   return `
     <article class="item-card firing-${item.firing} ${selected ? "selected" : ""}" data-item-id="${item.id}" data-selectable="${selectable}" role="button" tabindex="0" aria-label="${selectable ? "Zaznacz wyrób" : `Otwórz ${escapeHtml(label)}`}">
       <div class="item-photo">
-        <img src="${item.image}" alt="${label}, wyrób: ${item.owner}" />
+        <img src="${cardImage}" alt="${label}, wyrób: ${item.owner}" />
         ${selectable ? `<span class="select-circle" aria-hidden="true">✓</span>` : ""}
-        <span class="status-pill ${item.status}">${statusLabel(item.status)}</span>
+        <span class="status-pill ${item.status}">${isJournalItem ? journalStageLabel(item.journalStage) : statusLabel(item.status)}</span>
         <span class="firing-pill ${item.firing}">${firingLabel(item.firing)}</span>
+        ${finalImages.length ? `<span class="final-photo-pill">${finalImages.length > 1 ? `${finalImages.length} zdjęcia efektu` : "Efekt finalny"}</span>` : ""}
       </div>
       <div class="item-body">
         <div class="item-title-row">
           <div>
             <h3>${label}</h3>
-            <p>${isStudentItem ? (groupItems.length > 1 ? `${position} z ${groupItems.length} w tej dostawie` : `Z dostawy ${formatFullDate(item.date)}`) : `${firingLabel(item.firing)} · ${formatDate(item.date)}`}</p>
+            <p>${
+              isStudentItem
+                ? groupItems.length > 1
+                  ? `${position} z ${groupItems.length} w tej dostawie`
+                  : `Z dostawy ${formatFullDate(item.date)}`
+                : isJournalItem
+                  ? `${journalStageLabel(item.journalStage)} · ${formatFullDate(item.date)}`
+                  : `${firingLabel(item.firing)} · ${formatDate(item.date)}`
+            }</p>
           </div>
         </div>
         <div class="item-meta">
           ${
-            isStudentItem
+            isStudentItem || isJournalItem
               ? `<span class="recipe-indicator ${recipeCount ? "filled" : ""}">${recipeCount ? "Ma notatkę zdobienia" : "Dodaj notatkę"}</span>
                  <span class="group-pill">${formatDate(item.date)}</span>`
               : `<span class="owner-pill">${item.owner}</span>
@@ -604,6 +709,42 @@ function itemCard(item, selectable) {
         </div>
       </div>
     </article>
+  `;
+}
+
+function journalStageLabel(stage) {
+  return stage === "finished" ? "Gotowy" : "W trakcie";
+}
+
+function instructorJournalView() {
+  const items = state.items
+    .filter((item) => item.personalJournal && item.ownerId === "marta")
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const finished = items.filter((item) => item.journalStage === "finished").length;
+  const withRecipes = items.filter((item) => {
+    const recipe = normalizeRecipe(item.recipe);
+    return recipeCategories.some((category) => recipe[category.id].length) || recipe.note;
+  }).length;
+
+  return `
+    <div class="page-head journal-page-head">
+      <div>
+        <p class="eyebrow">Prywatna przestrzeń instruktora</p>
+        <h1>Mój dziennik ceramiczny</h1>
+        <p class="lead">Własne próby, receptury i efekty wypałów. Te wpisy nie pojawiają się w kolejce ceramiki kursantów.</p>
+      </div>
+      <button class="primary-button" id="open-journal-flow" type="button"><span class="button-icon">+</span> Dodaj mój wyrób</button>
+    </div>
+    <div class="journal-stats">
+      <div><strong>${items.length}</strong><span>wszystkich prób</span></div>
+      <div><strong>${finished}</strong><span>gotowych efektów</span></div>
+      <div><strong>${withRecipes}</strong><span>zapisanych receptur</span></div>
+    </div>
+    ${
+      items.length
+        ? `<div class="items-grid journal-grid">${items.map((item) => itemCard(item, false)).join("")}</div>`
+        : emptyState("Dziennik jest pusty", "Dodaj pierwszą własną próbę ceramiczną.")
+    }
   `;
 }
 
@@ -726,6 +867,7 @@ function notificationsView() {
 
 function instructorGallery() {
   const filtered = state.items
+    .filter((item) => !item.personalJournal)
     .filter((item) => state.instructorStatus === "all" || item.status === state.instructorStatus)
     .filter((item) => state.instructorFiring === "all" || item.firing === state.instructorFiring)
     .filter((item) => `${itemLabel(item)} ${itemCode(item)} ${item.owner} ${item.group}`.toLowerCase().includes(state.search.toLowerCase()))
@@ -904,7 +1046,7 @@ function clientsView() {
       <div class="history-list">
         ${clients
           .map(([name, id]) => {
-            const items = state.items.filter((item) => item.ownerId === id);
+            const items = state.items.filter((item) => !item.personalJournal && item.ownerId === id);
             const waiting = items.filter((item) => item.status === "waiting").length;
             return `
               <div class="history-row">
@@ -920,7 +1062,7 @@ function clientsView() {
 }
 
 function instructorArchive() {
-  const archived = state.items.filter((item) => item.status === "collected");
+  const archived = state.items.filter((item) => !item.personalJournal && item.status === "collected");
   return `
     <div class="page-head">
       <div>
@@ -952,6 +1094,7 @@ function attachViewListeners() {
   });
 
   document.querySelector("#open-add-flow")?.addEventListener("click", openAddFlow);
+  document.querySelector("#open-journal-flow")?.addEventListener("click", openJournalFlow);
 
   document.querySelectorAll("[data-stat-filter]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1037,7 +1180,7 @@ function attachViewListeners() {
 }
 
 function attachGalleryInteractions() {
-  document.querySelectorAll(".gallery-grid .item-card").forEach((card) => {
+  document.querySelectorAll(".gallery-grid .item-card, .journal-grid .item-card").forEach((card) => {
     const itemId = Number(card.dataset.itemId);
     const selectable = card.dataset.selectable === "true";
     let pressTimer;
@@ -1092,28 +1235,37 @@ function attachGalleryInteractions() {
 function openItemPreview(itemId) {
   const item = state.items.find((candidate) => candidate.id === itemId);
   if (!item) return;
+  const editable = canEditItem(item);
   const isStudentItem = state.role === "student" && item.ownerId === "anna";
+  const isJournalItem = state.role === "instructor" && item.personalJournal;
+  const canAddFinal =
+    editable &&
+    (item.status === "ready" ||
+      item.status === "collected" ||
+      (item.personalJournal && item.journalStage === "finished"));
   const label = visibleItemLabel(item);
-  const recipe = normalizeRecipe(item.recipe);
+  const finalImages = normalizeFinalImages(item.finalImages);
+  const previewImage = displayItemImage(item);
   const modal = document.querySelector("#modal");
   modal.innerHTML = `
     <div class="modal-head preview-modal-head">
       <div>
-        <p class="eyebrow">${isStudentItem ? "Twój wyrób" : `Wyrób ${itemCode(item)}`}</p>
+        <p class="eyebrow">${isStudentItem ? "Twój wyrób" : isJournalItem ? "Mój dziennik ceramiczny" : `Wyrób ${itemCode(item)}`}</p>
         <h2 id="modal-title">${label}</h2>
       </div>
       <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
     </div>
     <div class="item-preview-photo firing-${item.firing}">
-      <img src="${item.image}" alt="${label}, wyrób: ${item.owner}" />
+      <img src="${previewImage}" alt="${label}, wyrób: ${item.owner}" />
       <span class="preview-firing-badge ${item.firing}">${firingLabel(item.firing)}</span>
+      ${finalImages.length ? '<span class="preview-final-badge">Najnowszy efekt finalny</span>' : ""}
     </div>
     <div class="item-preview-details">
       ${
-        isStudentItem
+        isStudentItem || isJournalItem
           ? `<div class="student-item-intro">
                <strong>Historia tej konkretnej rzeczy</strong>
-               <span>${item.group} · numer pomocniczy pracowni ${itemCode(item)}</span>
+               <span>${isJournalItem ? `${formatFullDate(item.date)} · prywatny wpis instruktora` : `${item.group} · numer pomocniczy pracowni ${itemCode(item)}`}</span>
              </div>`
           : `<div class="preview-owner">
                <span class="avatar">${item.owner
@@ -1124,19 +1276,131 @@ function openItemPreview(itemId) {
              </div>`
       }
       <div class="preview-facts">
-        <div><small>Status</small><strong>${statusLabel(item.status)}</strong></div>
+        <div><small>Status</small><strong>${isJournalItem ? journalStageLabel(item.journalStage) : statusLabel(item.status)}</strong></div>
         <div><small>Wypał</small><strong>${firingLabel(item.firing)}</strong></div>
-        <div><small>Przyniesiono</small><strong>${formatDate(item.date)}</strong></div>
+        <div><small>${isJournalItem ? "Dodano" : "Przyniesiono"}</small><strong>${formatDate(item.date)}</strong></div>
       </div>
+      ${finalEffectSection(item, canAddFinal)}
       ${recipeSummary(item)}
     </div>
     <div class="modal-foot preview-modal-foot">
       <button class="secondary-button close-modal" type="button">Zamknij podgląd</button>
-      ${isStudentItem ? '<button class="primary-button" id="edit-recipe" type="button">Edytuj notatkę zdobienia</button>' : ""}
+      ${isJournalItem && item.journalStage !== "finished" ? '<button class="secondary-button" id="mark-journal-finished" type="button">Oznacz jako gotowy</button>' : ""}
+      ${editable ? '<button class="primary-button" id="edit-recipe" type="button">Edytuj notatkę zdobienia</button>' : ""}
     </div>`;
   modal.querySelectorAll(".close-modal").forEach((button) => button.addEventListener("click", closeModal));
   modal.querySelector("#edit-recipe")?.addEventListener("click", () => openRecipeEditor(itemId));
+  modal.querySelector("#mark-journal-finished")?.addEventListener("click", () => {
+    state.items = state.items.map((candidate) =>
+      candidate.id === itemId
+        ? { ...candidate, journalStage: "finished", status: "collected", firedAt: "2026-06-10" }
+        : candidate,
+    );
+    saveState();
+    openItemPreview(itemId);
+    showToast("Wyrób oznaczono jako gotowy. Możesz dodać zdjęcia finalnego efektu.");
+  });
+  modal.querySelector("#add-final-photo")?.addEventListener("click", () => {
+    finalPhotoTargetId = itemId;
+    document.querySelector("#final-photo-input").click();
+  });
+  modal.querySelectorAll("[data-demo-final-image]").forEach((button) => {
+    button.addEventListener("click", () => addFinalImages(itemId, [button.dataset.demoFinalImage]));
+  });
+  modal.querySelectorAll("[data-remove-final-image]").forEach((button) => {
+    button.addEventListener("click", () => removeFinalImage(itemId, button.dataset.removeFinalImage));
+  });
   openModal();
+}
+
+function finalEffectSection(item, canAddFinal) {
+  const finalImages = normalizeFinalImages(item.finalImages);
+  return `
+    <section class="final-effect-section ${finalImages.length ? "" : "empty"}">
+      <div class="final-effect-head">
+        <div>
+          <small>Przed i po wypale</small>
+          <h3>Finalny efekt</h3>
+        </div>
+        ${finalImages.length ? `<span>${finalImages.length} ${pluralPhotos(finalImages.length)}</span>` : ""}
+      </div>
+      <div class="before-after-grid">
+        <figure>
+          <img src="${item.image}" alt="Zdjęcie przed wypałem" />
+          <figcaption>Przed wypałem</figcaption>
+        </figure>
+        ${finalImages
+          .map(
+            (entry, index) => `
+              <figure class="final-effect-photo">
+                <img src="${entry.image}" alt="Finalny efekt, zdjęcie ${index + 1}" />
+                <figcaption>Efekt finalny · ${formatDate(entry.date)}</figcaption>
+                ${
+                  canAddFinal
+                    ? `<button class="remove-final-photo" data-remove-final-image="${entry.id}" type="button" aria-label="Usuń zdjęcie finalnego efektu ${index + 1}">×</button>`
+                    : ""
+                }
+              </figure>`,
+          )
+          .join("")}
+      </div>
+      ${
+        canAddFinal
+          ? `<div class="final-photo-actions">
+              <button class="secondary-button" id="add-final-photo" type="button">${finalImages.length ? "Dodaj kolejne zdjęcie efektu" : "Dodaj zdjęcie po wypale"}</button>
+              <div class="demo-final-row" aria-label="Przykładowe zdjęcia w wersji demo">
+                <span>Demo:</span>
+                ${["kubek", "miska", "talerz", "wazon"]
+                  .map(
+                    (name) =>
+                      `<button data-demo-final-image="assets/${name}.webp" type="button" aria-label="Dodaj finalne zdjęcie: ${name}"><img src="assets/${name}.webp" alt="" /></button>`,
+                  )
+                  .join("")}
+              </div>
+            </div>`
+          : `<p class="final-effect-hint">${
+              item.status === "waiting" && !item.personalJournal
+                ? "Zdjęcia finalnego efektu będzie można dodać po zakończeniu wypału."
+                : "Właściciel może uzupełnić tę galerię zdjęciami gotowego wyrobu."
+            }</p>`
+      }
+    </section>
+  `;
+}
+
+function addFinalImages(itemId, images) {
+  state.items = state.items.map((item) =>
+    item.id === itemId
+      ? {
+          ...item,
+          finalImages: [
+            ...normalizeFinalImages(item.finalImages),
+            ...images.map((image) => ({
+              id: `final-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+              image,
+              date: "2026-06-10",
+            })),
+          ],
+        }
+      : item,
+  );
+  saveState();
+  openItemPreview(itemId);
+  showToast(images.length === 1 ? "Zdjęcie finalnego efektu zostało dodane." : "Zdjęcia finalnego efektu zostały dodane.");
+}
+
+function removeFinalImage(itemId, imageId) {
+  state.items = state.items.map((item) =>
+    item.id === itemId
+      ? {
+          ...item,
+          finalImages: normalizeFinalImages(item.finalImages).filter((entry) => entry.id !== imageId),
+        }
+      : item,
+  );
+  saveState();
+  openItemPreview(itemId);
+  showToast("Zdjęcie finalnego efektu zostało usunięte.");
 }
 
 function recipeSummary(item) {
@@ -1332,7 +1596,7 @@ function openGlazePreview(glazeId) {
             ? `<div class="glaze-example-row">${examples
                 .map(
                   (item) =>
-                    `<img src="${item.image}" alt="${studentItemLabel(item)}" title="${studentItemLabel(item)}" />`,
+                    `<img src="${displayItemImage(item)}" alt="${studentItemLabel(item)}" title="${studentItemLabel(item)}" />`,
                 )
                 .join("")}</div>`
             : "<p>Pierwsze przykłady pojawią się po zapisaniu szkliwa przy wyrobie.</p>"
@@ -1352,6 +1616,132 @@ function toggleSelection(id) {
     : [...state.selected, id];
   saveState();
   render();
+}
+
+function openJournalFlow() {
+  journalDraft = {
+    title: "",
+    image: null,
+    firing: "glaze",
+    stage: "making",
+  };
+  renderJournalFlow();
+  openModal();
+}
+
+function renderJournalFlow() {
+  const modal = document.querySelector("#modal");
+  modal.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">Mój dziennik ceramiczny</p>
+        <h2 id="modal-title">Dodaj własny wyrób</h2>
+        <p>Na początek wystarczy zdjęcie i krótka nazwa. Recepturę uzupełnisz później.</p>
+      </div>
+      <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
+    </div>
+    <div class="modal-body journal-flow">
+      <label class="field">
+        <span>Nazwa próby lub wyrobu</span>
+        <input class="input" id="journal-title" type="text" placeholder="np. Czarka z próbą zieleni" value="${escapeHtml(journalDraft.title)}" />
+      </label>
+      <div>
+        <span class="journal-field-label">Zdjęcie wyrobu</span>
+        <button class="journal-upload ${journalDraft.image ? "has-photo" : ""}" id="journal-upload" type="button">
+          ${
+            journalDraft.image
+              ? `<img src="${journalDraft.image}" alt="Wybrane zdjęcie własnego wyrobu" /><span>Zmień zdjęcie</span>`
+              : `<span class="camera-symbol">${icons.camera}</span><strong>Zrób lub dodaj zdjęcie</strong>`
+          }
+        </button>
+        <div class="demo-final-row journal-demo-row">
+          <span>Demo:</span>
+          ${["kubek", "miska", "talerz", "wazon"]
+            .map(
+              (name) =>
+                `<button data-journal-demo-image="assets/${name}.webp" type="button" aria-label="Wybierz zdjęcie do dziennika: ${name}"><img src="assets/${name}.webp" alt="" /></button>`,
+            )
+            .join("")}
+        </div>
+      </div>
+      <fieldset class="journal-choice">
+        <legend>Na jakim jest etapie?</legend>
+        <div class="recipe-chip-list">
+          <button class="recipe-chip ${journalDraft.stage === "making" ? "active" : ""}" data-journal-stage="making" type="button">W trakcie</button>
+          <button class="recipe-chip ${journalDraft.stage === "finished" ? "active" : ""}" data-journal-stage="finished" type="button">Gotowy po wypale</button>
+        </div>
+      </fieldset>
+      <fieldset class="journal-choice">
+        <legend>Rodzaj wypału</legend>
+        <div class="recipe-chip-list">
+          <button class="recipe-chip ${journalDraft.firing === "bisque" ? "active" : ""}" data-journal-firing="bisque" type="button">Biskwit</button>
+          <button class="recipe-chip ${journalDraft.firing === "glaze" ? "active" : ""}" data-journal-firing="glaze" type="button">Na ostro</button>
+        </div>
+      </fieldset>
+    </div>
+    <div class="modal-foot">
+      <button class="secondary-button close-modal" type="button">Anuluj</button>
+      <button class="primary-button" id="save-journal-item" type="button" ${journalDraft.image ? "" : "disabled"}>Dodaj do dziennika</button>
+    </div>`;
+
+  modal.querySelectorAll(".close-modal").forEach((button) => button.addEventListener("click", closeModal));
+  modal.querySelector("#journal-title").addEventListener("input", (event) => {
+    journalDraft.title = event.target.value;
+  });
+  modal.querySelector("#journal-upload").addEventListener("click", () => {
+    journalDraft.title = modal.querySelector("#journal-title").value;
+    document.querySelector("#journal-photo-input").click();
+  });
+  modal.querySelectorAll("[data-journal-demo-image]").forEach((button) => {
+    button.addEventListener("click", () => {
+      journalDraft.title = modal.querySelector("#journal-title").value;
+      journalDraft.image = button.dataset.journalDemoImage;
+      renderJournalFlow();
+    });
+  });
+  modal.querySelectorAll("[data-journal-stage]").forEach((button) => {
+    button.addEventListener("click", () => {
+      journalDraft.title = modal.querySelector("#journal-title").value;
+      journalDraft.stage = button.dataset.journalStage;
+      renderJournalFlow();
+    });
+  });
+  modal.querySelectorAll("[data-journal-firing]").forEach((button) => {
+    button.addEventListener("click", () => {
+      journalDraft.title = modal.querySelector("#journal-title").value;
+      journalDraft.firing = button.dataset.journalFiring;
+      renderJournalFlow();
+    });
+  });
+  modal.querySelector("#save-journal-item")?.addEventListener("click", saveJournalItem);
+}
+
+function saveJournalItem() {
+  const title = document.querySelector("#journal-title").value.trim();
+  if (!journalDraft.image) return;
+  const id = Math.max(100, ...state.items.map((item) => item.id)) + 1;
+  state.items.push({
+    id,
+    code: `MC-${String(id).padStart(4, "0")}`,
+    name: title || `Próba z ${formatFullDate("2026-06-10")}`,
+    owner: "Marta Wiśniewska",
+    ownerId: "marta",
+    image: journalDraft.image,
+    status: journalDraft.stage === "finished" ? "collected" : "waiting",
+    firing: journalDraft.firing,
+    group: "Dziennik instruktora",
+    date: "2026-06-10",
+    firedAt: journalDraft.stage === "finished" ? "2026-06-10" : undefined,
+    personalJournal: true,
+    journalStage: journalDraft.stage,
+    finalImages: [],
+    recipe: normalizeRecipe(),
+  });
+  saveState();
+  closeModal();
+  state.view = "journal";
+  render();
+  showToast("Wyrób został dodany do Twojego dziennika.");
 }
 
 function openAddFlow() {
@@ -1550,7 +1940,7 @@ function photoGrid(mode) {
 }
 
 function confirmNewItems() {
-  let nextId = Math.max(0, ...state.items.map((item) => item.id)) + 1;
+  let nextId = Math.max(0, ...state.items.filter((item) => !item.personalJournal).map((item) => item.id)) + 1;
   const newItems = addFlow.photos.map((photo) => {
     const id = nextId++;
     return {
@@ -1563,6 +1953,7 @@ function confirmNewItems() {
       firing: photo.firing,
       group: "Dostawa 09.06",
       date: "2026-06-09",
+      finalImages: [],
       recipe: normalizeRecipe(),
     };
   });
@@ -1706,6 +2097,37 @@ document.querySelector("#photo-input").addEventListener("change", (event) => {
     };
     reader.readAsDataURL(file);
   });
+  event.target.value = "";
+});
+
+document.querySelector("#final-photo-input").addEventListener("change", (event) => {
+  const files = [...event.target.files];
+  const itemId = finalPhotoTargetId;
+  if (!files.length || !itemId) return;
+  const images = [];
+  files.forEach((file) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      images.push(reader.result);
+      if (images.length === files.length) {
+        addFinalImages(itemId, images);
+        finalPhotoTargetId = null;
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = "";
+});
+
+document.querySelector("#journal-photo-input").addEventListener("change", (event) => {
+  const [file] = [...event.target.files];
+  if (!file || !journalDraft) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    journalDraft.image = reader.result;
+    renderJournalFlow();
+  };
+  reader.readAsDataURL(file);
   event.target.value = "";
 });
 
