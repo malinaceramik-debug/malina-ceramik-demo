@@ -30,9 +30,10 @@ Backend, prawdziwe konta, wysyłka powiadomień i synchronizacja z Arkuszami Goo
 
 ## Wersja internetowa
 
-Demo jest przygotowane do automatycznej publikacji przez GitHub Pages.
-Po utworzeniu repozytorium każda zmiana wysłana do gałęzi `main` zostanie
-automatycznie opublikowana.
+Demo: https://malinaceramik-debug.github.io/malina-ceramik-demo/
+
+Każda zmiana wysłana do gałęzi `main` zostanie automatycznie opublikowana
+przez GitHub Pages.
 
 W tej wersji dane są demonstracyjne i zapisują się wyłącznie w przeglądarce
 osoby testującej. Zmiany wykonane przez jednego instruktora nie są jeszcze
