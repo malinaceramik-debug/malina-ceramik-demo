@@ -280,17 +280,6 @@ function studentHome() {
           Dodaj moje wyroby
         </button>
       </article>
-
-      <article class="tip-card">
-        <div class="tip-photo" aria-hidden="true">
-          <img src="assets/malina-kiln.webp" alt="" />
-          <span>Prosto z pieca</span>
-        </div>
-        <div>
-          <h3>Jedna prosta zasada</h3>
-          <p>Na zdjęciu powinien być jeden cały wyrób. Jeśli Ty go rozpoznajesz, instruktor też sobie poradzi.</p>
-        </div>
-      </article>
     </div>
 
     <div class="section-head">
@@ -978,7 +967,7 @@ function addFlowBody() {
         <span>
           <span class="camera-symbol">${icons.camera}</span>
           <strong>Zrób lub dodaj zdjęcie</strong>
-          <small>Po każdym zdjęciu możesz od razu dodać następne. Nie musisz jeszcze wybierać rodzaju wypału.</small>
+          <small>Jeżeli Ty nie poznajesz swojego wyrobu na zdjęciu, my też go później nie poznamy.</small>
         </span>
       </button>
       <p class="demo-label">W wersji demonstracyjnej dodaj przykładowy wyrób:</p>

@@ -1,4 +1,4 @@
-const CACHE = "malina-ceramik-demo-v7";
+const CACHE = "malina-ceramik-demo-v8";
 const ASSETS = [
   "./",
   "index.html",
@@ -12,7 +12,6 @@ const ASSETS = [
   "assets/malina-app-icon-maskable.png",
   "assets/malina-hands-hero.webp",
   "assets/malina-hands-mobile.webp",
-  "assets/malina-kiln.webp",
   "assets/kubek.webp",
   "assets/miska.webp",
   "assets/wazon.webp",

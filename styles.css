@@ -445,14 +445,12 @@ h2 {
 }
 
 .hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
-  gap: 20px;
+  display: block;
 }
 
 .action-card {
   position: relative;
-  min-height: 320px;
+  min-height: 360px;
   overflow: hidden;
   padding: 38px;
   border-radius: var(--radius-lg);
@@ -506,56 +504,11 @@ h2 {
   box-shadow: none;
 }
 
-.tip-card,
 .panel,
 .stat-card {
   border: 1px solid var(--line);
   background: rgba(255, 250, 246, 0.94);
   box-shadow: 0 10px 32px rgba(52, 45, 35, 0.045);
-}
-
-.tip-card {
-  display: flex;
-  min-height: 320px;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 30px;
-  border-radius: var(--radius-lg);
-}
-
-.tip-photo {
-  position: relative;
-  height: 148px;
-  overflow: hidden;
-  border-radius: 18px;
-  background: #e9dfd4;
-}
-
-.tip-photo::after {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 46%, rgba(28, 33, 29, 0.62));
-  content: "";
-}
-
-.tip-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 39%;
-}
-
-.tip-photo span {
-  position: absolute;
-  z-index: 1;
-  right: 12px;
-  bottom: 11px;
-  padding: 6px 9px;
-  border-radius: 999px;
-  color: white;
-  background: rgba(35, 69, 54, 0.84);
-  font-size: 10px;
-  font-weight: 800;
 }
 
 .tip-visual {
@@ -575,18 +528,6 @@ h2 {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.7;
-}
-
-.tip-card h3 {
-  margin: 20px 0 9px;
-  font-size: 17px;
-}
-
-.tip-card p {
-  margin-bottom: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.6;
 }
 
 .section-head {
@@ -1886,13 +1827,8 @@ h2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .hero-grid,
   .settlement-layout {
     grid-template-columns: 1fr;
-  }
-
-  .tip-card {
-    min-height: auto;
   }
 }
 
@@ -1963,12 +1899,7 @@ h2 {
     font-size: 38px;
   }
 
-  .hero-grid {
-    gap: 13px;
-  }
-
-  .action-card,
-  .tip-card {
+  .action-card {
     min-height: auto;
     padding: 26px;
     border-radius: 22px;
@@ -1983,11 +1914,6 @@ h2 {
 
   .action-card h2 {
     font-size: 31px;
-  }
-
-  .tip-photo {
-    height: 160px;
-    margin-bottom: 22px;
   }
 
   .stats-grid {
