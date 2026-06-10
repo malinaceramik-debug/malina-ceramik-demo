@@ -121,7 +121,16 @@ let toastTimer;
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return saved ? { ...initialState, ...saved } : structuredClone(initialState);
+    if (!saved) return structuredClone(initialState);
+    const items = (saved.items || initialItems).map((item) => {
+      const normalized = {
+        ...item,
+        code: item.code || `MC-${String(item.id).padStart(4, "0")}`,
+      };
+      if (/^Wyrób \d+$/.test(normalized.name || "")) delete normalized.name;
+      return normalized;
+    });
+    return { ...initialState, ...saved, items };
   } catch {
     return structuredClone(initialState);
   }
@@ -162,6 +171,14 @@ function statusLabel(status) {
 
 function firingLabel(firing) {
   return firing === "bisque" ? "Biskwit" : "Na ostro";
+}
+
+function itemCode(item) {
+  return item.code || `MC-${String(item.id).padStart(4, "0")}`;
+}
+
+function itemLabel(item) {
+  return item.name || itemCode(item);
 }
 
 function firingLegend() {
@@ -389,10 +406,11 @@ function gallerySection(title, copy, items, selectable, sectionId) {
 
 function itemCard(item, selectable) {
   const selected = state.selected.includes(item.id);
+  const label = itemLabel(item);
   return `
     <article class="item-card firing-${item.firing} ${selected ? "selected" : ""}" data-item-id="${item.id}" ${selectable ? 'role="button" tabindex="0" aria-label="Zaznacz wyrób"' : ""}>
       <div class="item-photo">
-        <img src="${item.image}" alt="${item.name}, wyrób: ${item.owner}" />
+        <img src="${item.image}" alt="${label}, wyrób: ${item.owner}" />
         ${selectable ? `<span class="select-circle" aria-hidden="true">✓</span>` : ""}
         <span class="status-pill ${item.status}">${statusLabel(item.status)}</span>
         <span class="firing-pill ${item.firing}">${firingLabel(item.firing)}</span>
@@ -400,7 +418,7 @@ function itemCard(item, selectable) {
       <div class="item-body">
         <div class="item-title-row">
           <div>
-            <h3>${item.name}</h3>
+            <h3>${label}</h3>
             <p>${firingLabel(item.firing)} · ${formatDate(item.date)}</p>
           </div>
         </div>
@@ -455,7 +473,7 @@ function notificationsView() {
                     <div class="history-row">
                       <div class="history-icon">${icon("bell")}</div>
                       <div>
-                        <strong>${item.name} jest gotowy do odbioru</strong>
+                        <strong>${itemLabel(item)} jest gotowy do odbioru</strong>
                         <small>Wypalono ${formatDate(item.firedAt || "2026-06-08")} · ${firingLabel(item.firing)}</small>
                       </div>
                       <span class="status-pill ready">Nowe</span>
@@ -473,7 +491,7 @@ function instructorGallery() {
   const filtered = state.items
     .filter((item) => state.instructorStatus === "all" || item.status === state.instructorStatus)
     .filter((item) => state.instructorFiring === "all" || item.firing === state.instructorFiring)
-    .filter((item) => `${item.name} ${item.owner} ${item.group}`.toLowerCase().includes(state.search.toLowerCase()))
+    .filter((item) => `${itemLabel(item)} ${itemCode(item)} ${item.owner} ${item.group}`.toLowerCase().includes(state.search.toLowerCase()))
     .sort((a, b) => a.date.localeCompare(b.date));
   const statusFilters = [
     ["all", "Wszystkie"],
@@ -814,17 +832,18 @@ function attachGalleryInteractions() {
 function openItemPreview(itemId) {
   const item = state.items.find((candidate) => candidate.id === itemId);
   if (!item) return;
+  const label = itemLabel(item);
   const modal = document.querySelector("#modal");
   modal.innerHTML = `
     <div class="modal-head preview-modal-head">
       <div>
         <p class="eyebrow">Podgląd wyrobu</p>
-        <h2 id="modal-title">${item.name}</h2>
+        <h2 id="modal-title">${label}</h2>
       </div>
       <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
     </div>
     <div class="item-preview-photo firing-${item.firing}">
-      <img src="${item.image}" alt="${item.name}, wyrób: ${item.owner}" />
+      <img src="${item.image}" alt="${label}, wyrób: ${item.owner}" />
       <span class="preview-firing-badge ${item.firing}">${firingLabel(item.firing)}</span>
     </div>
     <div class="item-preview-details">
@@ -905,8 +924,9 @@ function renderAddFlow() {
   });
   modal.querySelector("#confirm-add")?.addEventListener("click", confirmNewItems);
   modal.querySelector("#all-glaze")?.addEventListener("click", () => {
+    const shouldSelectAll = !addFlow.photos.every((photo) => photo.firing === "glaze");
     addFlow.photos.forEach((photo) => {
-      photo.firing = "glaze";
+      photo.firing = shouldSelectAll ? "glaze" : "bisque";
     });
     renderAddFlow();
   });
@@ -932,7 +952,7 @@ function renderAddFlow() {
 
   modal.querySelectorAll("[data-demo-image]").forEach((button) => {
     button.addEventListener("click", () => {
-      addPhoto(button.dataset.demoImage, button.dataset.demoName);
+      addPhoto(button.dataset.demoImage);
       renderAddFlow();
     });
   });
@@ -1002,7 +1022,7 @@ function addFlowBody() {
       <span class="all-glaze-check" aria-hidden="true">${allGlaze ? "✓" : ""}</span>
       <span>
         <strong>Wszystko jest na ostro</strong>
-        <small>Jednym kliknięciem oznacz wszystkie dodane zdjęcia.</small>
+        <small>${allGlaze ? "Kliknij ponownie, aby przywrócić wszystko do biskwitu." : "Jednym kliknięciem oznacz wszystkie dodane zdjęcia."}</small>
       </span>
     </button>
     <div class="firing-summary">
@@ -1012,11 +1032,10 @@ function addFlowBody() {
   `;
 }
 
-function addPhoto(image, name = "Wyrób") {
+function addPhoto(image) {
   addFlow.photos.push({
     id: `photo-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     image,
-    name: `${name} ${addFlow.photos.length + 1}`,
     firing: "bisque",
   });
 }
@@ -1035,14 +1054,14 @@ function photoGrid(mode) {
           (photo, index) => `
             <article
               class="flow-photo-card ${mode === "firing" ? `firing-choice ${photo.firing}` : ""}"
-              ${mode === "firing" ? `data-toggle-firing="${photo.id}" role="button" tabindex="0" aria-label="Zmień rodzaj wypału dla wyrobu ${index + 1}"` : ""}
+              ${mode === "firing" ? `data-toggle-firing="${photo.id}" role="button" tabindex="0" aria-label="Zmień rodzaj wypału dla zdjęcia ${index + 1}"` : ""}
             >
               <div class="flow-photo-image">
-                <img src="${photo.image}" alt="Wyrób ${index + 1}" />
+                <img src="${photo.image}" alt="Zdjęcie ${index + 1}" />
                 ${mode === "editing" ? `<button class="remove-photo" data-remove-photo="${photo.id}" type="button" aria-label="Usuń zdjęcie ${index + 1}">×</button>` : ""}
               </div>
               <div class="flow-photo-caption">
-                <strong>Wyrób ${index + 1}</strong>
+                <strong class="photo-sequence">${index + 1}</strong>
                 ${mode === "firing" ? `<span>${photo.firing === "bisque" ? "Biskwit" : "Na ostro"}</span>` : ""}
               </div>
             </article>`,
@@ -1053,17 +1072,20 @@ function photoGrid(mode) {
 
 function confirmNewItems() {
   let nextId = Math.max(0, ...state.items.map((item) => item.id)) + 1;
-  const newItems = addFlow.photos.map((photo, index) => ({
-    id: nextId++,
-    name: `Wyrób ${index + 1}`,
-    owner: "Anna Kowalska",
-    ownerId: "anna",
-    image: photo.image,
-    status: "waiting",
-    firing: photo.firing,
-    group: "Dostawa 09.06",
-    date: "2026-06-09",
-  }));
+  const newItems = addFlow.photos.map((photo) => {
+    const id = nextId++;
+    return {
+      id,
+      code: `MC-${String(id).padStart(4, "0")}`,
+      owner: "Anna Kowalska",
+      ownerId: "anna",
+      image: photo.image,
+      status: "waiting",
+      firing: photo.firing,
+      group: "Dostawa 09.06",
+      date: "2026-06-09",
+    };
+  });
   state.items.push(...newItems);
   saveState();
   closeModal();
@@ -1198,7 +1220,7 @@ document.querySelector("#photo-input").addEventListener("change", (event) => {
   files.forEach((file) => {
     const reader = new FileReader();
     reader.onload = () => {
-      addPhoto(reader.result, "Wyrób");
+      addPhoto(reader.result);
       loaded += 1;
       if (loaded === files.length) renderAddFlow();
     };

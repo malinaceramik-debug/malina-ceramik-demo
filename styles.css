@@ -1605,6 +1605,17 @@ h2 {
   font-size: 12px;
 }
 
+.photo-sequence {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+  background: #f0ebe3;
+  font-variant-numeric: tabular-nums;
+}
+
 .flow-photo-caption span {
   padding: 5px 7px;
   border-radius: 999px;
