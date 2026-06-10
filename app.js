@@ -358,19 +358,21 @@ function navItems() {
     return [
       { id: "home", label: "Początek", icon: "home" },
       { id: "my-items", label: "Moje wyroby", icon: "gallery" },
-      { id: "glazes", label: "Katalog szkliw", icon: "palette" },
       { id: "history", label: "Historia", icon: "archive" },
       { id: "notifications", label: "Powiadomienia", icon: "bell" },
     ];
   }
   return [
     { id: "gallery", label: "Do wypału", icon: "gallery" },
-    { id: "glazes", label: "Katalog szkliw", icon: "palette" },
     { id: "journal", label: "Mój dziennik", icon: "archive" },
     { id: "settlements", label: "Rozliczenia", icon: "money" },
     { id: "clients", label: "Kursanci", icon: "users" },
     { id: "archive", label: "Archiwum", icon: "archive" },
   ];
+}
+
+function utilityNavItem() {
+  return { id: "glazes", label: "Szkliwa pracowni", icon: "palette" };
 }
 
 function statusLabel(status) {
@@ -470,7 +472,15 @@ function renderNav() {
         </button>`,
     )
     .join("");
+  const utilityItem = utilityNavItem();
+  const utilityMarkup = `
+    <div class="utility-nav-label">Biblioteka wspólna</div>
+    <button class="nav-button utility-nav-button ${state.view === utilityItem.id ? "active" : ""}" data-view="${utilityItem.id}" type="button">
+      ${icon(utilityItem.icon)}
+      <span>${utilityItem.label}</span>
+    </button>`;
   document.querySelector("#desktop-nav").innerHTML = markup;
+  document.querySelector("#desktop-utility-nav").innerHTML = utilityMarkup;
   document.querySelector("#mobile-nav").innerHTML = markup;
 }
 
@@ -566,11 +576,11 @@ function studentHome() {
 
     <article class="catalog-teaser">
       <div>
-        <p class="eyebrow">Biblioteka pracowni</p>
-        <h2>Znajdź pomysł na kolejne zdobienie</h2>
-        <p>Zobacz, jak szkliwa zachowywały się na różnych glinach i przy różnych temperaturach.</p>
+        <p class="eyebrow">Wspólna biblioteka Malina Ceramik</p>
+        <h2>Szkliwa dostępne w pracowni</h2>
+        <p>To wspólny katalog inspiracji, nie Twój osobisty notatnik. Zobacz, jak szkliwa zachowywały się na różnych glinach i przy różnych temperaturach.</p>
       </div>
-      <button class="primary-button" data-view="glazes" type="button">Otwórz katalog szkliw</button>
+      <button class="primary-button" data-view="glazes" type="button">Zobacz szkliwa pracowni</button>
     </article>
   `;
 }
@@ -745,6 +755,14 @@ function instructorJournalView() {
         ? `<div class="items-grid journal-grid">${items.map((item) => itemCard(item, false)).join("")}</div>`
         : emptyState("Dziennik jest pusty", "Dodaj pierwszą własną próbę ceramiczną.")
     }
+    <article class="catalog-teaser journal-catalog-teaser">
+      <div>
+        <p class="eyebrow">Biblioteka wspólna</p>
+        <h2>Sprawdź szkliwa dostępne w pracowni</h2>
+        <p>Biblioteka pracowni jest oddzielona od Twojego prywatnego dziennika i receptur.</p>
+      </div>
+      <button class="secondary-button" data-view="glazes" type="button">Otwórz szkliwa pracowni</button>
+    </article>
   `;
 }
 
@@ -757,9 +775,16 @@ function glazeCatalogView() {
   return `
     <div class="page-head catalog-page-head">
       <div>
-        <p class="eyebrow">Wspólna wiedza pracowni</p>
-        <h1>Katalog szkliw</h1>
-        <p class="lead">Inspiracje, próby i doświadczenia zebrane przez Malina Ceramik. Zobacz efekt, a potem zapisz użyte szkliwo przy swoim wyrobie.</p>
+        <p class="eyebrow">Wspólna biblioteka Malina Ceramik</p>
+        <h1>Szkliwa pracowni</h1>
+        <p class="lead">Oficjalna biblioteka szkliw używanych w pracowni wraz z przykładami efektów wykonanych przez różne osoby.</p>
+      </div>
+    </div>
+    <div class="catalog-identity">
+      <div class="catalog-identity-icon">${icon("palette")}</div>
+      <div>
+        <strong>To katalog wspólny dla całej pracowni</strong>
+        <span>Twoje prywatne receptury i notatki znajdziesz przy zdjęciach w sekcji „Moje wyroby”${state.role === "instructor" ? " oraz w „Moim dzienniku”" : ""}.</span>
       </div>
     </div>
     <div class="catalog-notice">
@@ -1411,7 +1436,7 @@ function recipeSummary(item) {
     <section class="recipe-summary ${hasRecipe ? "" : "empty"}">
       <div class="recipe-summary-head">
         <div>
-          <small>Osobisty katalog</small>
+          <small>Moja receptura</small>
           <h3>Notatka zdobienia</h3>
         </div>
         ${hasRecipe ? '<span class="recipe-saved">Zapisana</span>' : ""}
@@ -1453,7 +1478,7 @@ function renderRecipeEditor() {
   modal.innerHTML = `
     <div class="modal-head">
       <div>
-        <p class="eyebrow">Osobisty katalog</p>
+        <p class="eyebrow">Moja receptura wyrobu</p>
         <h2 id="modal-title">Jak powstał ten wyrób?</h2>
         <p>Wybierz fasolki. Wszystkie pola są opcjonalne.</p>
       </div>

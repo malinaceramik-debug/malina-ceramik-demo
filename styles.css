@@ -152,6 +152,32 @@ a {
   margin-top: auto;
 }
 
+.desktop-utility-nav {
+  margin-bottom: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.utility-nav-label {
+  margin: 0 12px 7px;
+  color: #9a9189;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.utility-nav-button {
+  border: 1px solid #dbe4dd;
+  background: #f3f7f4;
+}
+
+.utility-nav-button:hover,
+.utility-nav-button.active {
+  color: var(--green-dark);
+  background: var(--green-soft);
+}
+
 .demo-note {
   display: flex;
   align-items: center;
@@ -1399,6 +1425,49 @@ h2 {
   color: #6f493b;
   background: #fff1e8;
   font-size: 12px;
+}
+
+.catalog-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 17px;
+  border: 1px solid #d5e2da;
+  border-radius: 16px;
+  background: #edf5f0;
+}
+
+.catalog-identity-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--green);
+  background: white;
+}
+
+.catalog-identity-icon .nav-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.catalog-identity strong,
+.catalog-identity span {
+  display: block;
+}
+
+.catalog-identity span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.journal-catalog-teaser {
+  margin-top: 28px;
 }
 
 .catalog-notice span {
@@ -2736,9 +2805,18 @@ h2 {
     margin-top: 18px;
   }
 
+  .journal-catalog-teaser .secondary-button {
+    width: 100%;
+    margin-top: 18px;
+  }
+
   .catalog-notice {
     display: grid;
     gap: 4px;
+  }
+
+  .catalog-identity {
+    align-items: flex-start;
   }
 
   .glaze-grid {
