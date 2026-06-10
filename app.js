@@ -124,6 +124,11 @@ const initialItems = [
     finalImages: [
       { id: "final-2-1", image: "assets/talerz.webp", date: "2026-06-09" },
     ],
+    sharing: {
+      combination: true,
+      note: true,
+      imageIds: ["final-2-1"],
+    },
     recipe: {
       clay: ["Jasna kamionka"],
       glazes: ["Kobaltowy deszcz"],
@@ -202,6 +207,11 @@ const initialItems = [
       { id: "final-6-1", image: "assets/miska.webp", date: "2026-05-23" },
       { id: "final-6-2", image: "assets/talerz.webp", date: "2026-05-24" },
     ],
+    sharing: {
+      combination: true,
+      note: true,
+      imageIds: ["final-6-1"],
+    },
     recipe: {
       clay: ["Jasna kamionka"],
       glazes: ["Leśna zieleń"],
@@ -226,6 +236,11 @@ const initialItems = [
     finalImages: [
       { id: "final-101-1", image: "assets/talerz.webp", date: "2026-05-27" },
     ],
+    sharing: {
+      combination: true,
+      note: true,
+      imageIds: ["final-101-1"],
+    },
     recipe: {
       clay: ["Jasna kamionka"],
       glazes: ["Leśna zieleń"],
@@ -261,6 +276,7 @@ const initialState = {
   role: "student",
   view: "home",
   studentFilter: "all",
+  studentItemsTab: "studio",
   instructorStatus: "all",
   instructorFiring: "all",
   catalogGlazeBrands: [],
@@ -277,6 +293,14 @@ const initialState = {
     temperature: [],
   },
   payments: [
+    {
+      id: 3,
+      owner: "Anna Kowalska",
+      date: "2026-05-24",
+      bisque: 0.7,
+      glaze: 0.9,
+      total: 60.1,
+    },
     {
       id: 1,
       owner: "Zofia Malinowska",
@@ -311,11 +335,13 @@ function loadState() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!saved) return structuredClone(initialState);
     let items = (saved.items || initialItems).map((item) => {
+      const demoItem = initialItems.find((candidate) => candidate.id === item.id);
       const normalized = {
         ...item,
         code: item.code || `MC-${String(item.id).padStart(4, "0")}`,
         recipe: normalizeRecipe(item.recipe),
         finalImages: normalizeFinalImages(item.finalImages),
+        sharing: normalizeSharing(item.sharing || demoItem?.sharing),
       };
       if (/^Wyrób \d+$/.test(normalized.name || "")) delete normalized.name;
       return normalized;
@@ -330,10 +356,21 @@ function loadState() {
             code: `MC-${String(item.id).padStart(4, "0")}`,
             recipe: normalizeRecipe(item.recipe),
             finalImages: normalizeFinalImages(item.finalImages),
+            sharing: normalizeSharing(item.sharing),
           })),
       ];
     }
-    return { ...initialState, ...saved, items };
+    const payments = [...(saved.payments || initialState.payments)];
+    const demoStudentPayment = initialState.payments.find(
+      (payment) => payment.owner === "Anna Kowalska",
+    );
+    if (
+      demoStudentPayment &&
+      !payments.some((payment) => payment.owner === "Anna Kowalska")
+    ) {
+      payments.unshift(structuredClone(demoStudentPayment));
+    }
+    return { ...initialState, ...saved, items, payments };
   } catch {
     return structuredClone(initialState);
   }
@@ -363,6 +400,14 @@ function normalizeFinalImages(images = []) {
     : [];
 }
 
+function normalizeSharing(sharing = {}) {
+  return {
+    combination: Boolean(sharing.combination),
+    note: Boolean(sharing.note),
+    imageIds: Array.isArray(sharing.imageIds) ? sharing.imageIds : [],
+  };
+}
+
 function icon(name) {
   return `<span class="nav-icon" aria-hidden="true">${icons[name] || icons.home}</span>`;
 }
@@ -372,7 +417,7 @@ function navItems() {
     return [
       { id: "home", label: "Początek", icon: "home" },
       { id: "my-items", label: "Moje wyroby", icon: "gallery" },
-      { id: "history", label: "Historia", icon: "archive" },
+      { id: "combinations", label: "Moje kombinacje", icon: "palette" },
       { id: "notifications", label: "Powiadomienia", icon: "bell" },
     ];
   }
@@ -425,6 +470,13 @@ function displayItemImage(item) {
   return finalImages.length ? finalImages[finalImages.length - 1].image : item.image;
 }
 
+function sharedCatalogImage(item) {
+  const sharing = normalizeSharing(item.sharing);
+  const sharedId = sharing.imageIds[0];
+  if (sharedId === "before") return item.image;
+  return normalizeFinalImages(item.finalImages).find((entry) => entry.id === sharedId)?.image;
+}
+
 function canEditItem(item) {
   return (
     (state.role === "student" && item.ownerId === "anna") ||
@@ -465,7 +517,7 @@ function escapeHtml(value = "") {
 }
 
 function daysSince(value) {
-  const now = new Date("2026-06-10T12:00:00");
+  const now = new Date("2026-06-11T12:00:00");
   const then = new Date(`${value}T12:00:00`);
   return Math.max(0, Math.round((now - then) / 86400000));
 }
@@ -518,8 +570,8 @@ function render() {
   if (state.role === "student") {
     if (state.view === "home") content.innerHTML = studentHome();
     else if (state.view === "my-items") content.innerHTML = studentItems();
+    else if (state.view === "combinations") content.innerHTML = studentCombinations();
     else if (state.view === "glazes") content.innerHTML = glazeCatalogView();
-    else if (state.view === "history") content.innerHTML = studentHistory();
     else content.innerHTML = notificationsView();
   } else {
     if (state.view === "gallery") content.innerHTML = instructorGallery();
@@ -534,7 +586,7 @@ function render() {
 }
 
 function studentHome() {
-  const mine = state.items.filter((item) => item.ownerId === "anna");
+  const mine = state.items.filter((item) => item.ownerId === "anna" && !item.personalJournal);
   const waiting = mine.filter((item) => item.status === "waiting").length;
   const ready = mine.filter((item) => item.status === "ready").length;
   const collected = mine.filter((item) => item.status === "collected").length;
@@ -542,7 +594,7 @@ function studentHome() {
   return `
     <div class="page-head">
       <div>
-        <p class="eyebrow">Środa, 10 czerwca</p>
+        <p class="eyebrow">Czwartek, 11 czerwca</p>
         <h1>Dzień dobry, Aniu.</h1>
         <p class="lead">Tu sprawdzisz, co dzieje się z Twoją ceramiką. Bez zgadywania i bez szukania wiadomości.</p>
       </div>
@@ -614,19 +666,13 @@ function statCard(label, count, status, filter) {
 }
 
 function studentItems() {
-  const filters = [
-    ["all", "Wszystkie"],
-    ["ready", "Do odbioru"],
-    ["waiting", "Czekają"],
-    ["collected", "Odebrane"],
+  const mine = state.items.filter((item) => item.ownerId === "anna" && !item.personalJournal);
+  const payments = state.payments.filter((payment) => payment.owner === "Anna Kowalska");
+  const tabs = [
+    ["studio", "W pracowni", mine.filter((item) => item.status !== "collected").length],
+    ["archive", "Archiwum", mine.filter((item) => item.status === "collected").length],
+    ["payments", "Moje opłaty", payments.length],
   ];
-  const items = state.items
-    .filter((item) => item.ownerId === "anna")
-    .filter((item) => state.studentFilter === "all" || item.status === state.studentFilter)
-    .sort((a, b) => {
-      const priority = { ready: 0, waiting: 1, collected: 2 };
-      return priority[a.status] - priority[b.status] || b.date.localeCompare(a.date);
-    });
 
   return `
     <div class="page-head">
@@ -637,17 +683,91 @@ function studentItems() {
       </div>
       <button class="primary-button" id="open-add-flow" type="button"><span class="button-icon">+</span> Dodaj wyroby</button>
     </div>
-    <div class="filter-row">
-      ${filters
+    <div class="account-section-tabs" role="tablist" aria-label="Sekcje moich wyrobów">
+      ${tabs
         .map(
-          ([id, label]) =>
-            `<button class="filter-chip status-filter ${id} ${state.studentFilter === id ? "active" : ""}" data-student-filter="${id}" type="button">${label}</button>`,
+          ([id, label, count]) =>
+            `<button class="${state.studentItemsTab === id ? "active" : ""}" data-items-tab="${id}" type="button" role="tab" aria-selected="${state.studentItemsTab === id}"><span>${label}</span><strong>${count}</strong></button>`,
         )
         .join("")}
     </div>
+    ${studentItemsTabContent(mine, payments)}
+  `;
+}
+
+function studentItemsTabContent(mine, payments) {
+  if (state.studentItemsTab === "payments") {
+    const total = payments.reduce((sum, payment) => sum + payment.total, 0);
+    return `
+      <section class="payments-summary">
+        <div>
+          <small>Liczba rozliczeń</small>
+          <strong>${payments.length}</strong>
+        </div>
+        <div>
+          <small>Łącznie opłacono</small>
+          <strong>${formatMoney(total)}</strong>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="history-list">
+          ${
+            payments.length
+              ? payments.map(historyRow).join("")
+              : emptyState("Jeszcze bez opłat", "Pierwsze rozliczenie pojawi się tutaj po odbiorze ceramiki.")
+          }
+        </div>
+      </section>
+    `;
+  }
+
+  const filters = [
+    ["all", "Wszystkie"],
+    ["ready", "Do odbioru"],
+    ["waiting", "Czekają"],
+  ];
+  const items = mine
+    .filter((item) =>
+      state.studentItemsTab === "archive" ? item.status === "collected" : item.status !== "collected",
+    )
+    .filter(
+      (item) =>
+        state.studentItemsTab === "archive" ||
+        state.studentFilter === "all" ||
+        item.status === state.studentFilter,
+    )
+    .sort((a, b) => {
+      const priority = { ready: 0, waiting: 1, collected: 2 };
+      return priority[a.status] - priority[b.status] || b.date.localeCompare(a.date);
+    });
+
+  return `
+    ${
+      state.studentItemsTab === "studio"
+        ? `<div class="filter-row">
+            ${filters
+              .map(
+                ([id, label]) =>
+                  `<button class="filter-chip status-filter ${id} ${state.studentFilter === id ? "active" : ""}" data-student-filter="${id}" type="button">${label}</button>`,
+              )
+              .join("")}
+          </div>`
+        : ""
+    }
     ${firingLegend()}
     <p class="gallery-gesture-hint">Przytrzymaj zdjęcie, aby otworzyć podgląd.</p>
-    ${items.length ? studentGallerySections(items) : emptyState("Tu jest pusto", "Zmień filtr albo dodaj nowy wyrób.")}
+    ${
+      items.length
+        ? state.studentItemsTab === "archive"
+          ? gallerySection("Odebrane wyroby", "Twoja ceramiczna historia pozostaje pod ręką.", items, false, "collected")
+          : studentGallerySections(items)
+        : emptyState(
+            state.studentItemsTab === "archive" ? "Archiwum jest puste" : "Tu jest pusto",
+            state.studentItemsTab === "archive"
+              ? "Odebrane wyroby pojawią się tutaj."
+              : "Zmień filtr albo dodaj nowy wyrób.",
+          )
+    }
   `;
 }
 
@@ -655,7 +775,6 @@ function studentGallerySections(items) {
   const sections = [
     ["ready", "Do odbioru", "Te wyroby są już wypalone i czekają w pracowni."],
     ["waiting", "Czekają na wypał", "Wyroby przyjęte przez pracownię."],
-    ["collected", "Odebrane", "Historia odebranych wyrobów."],
   ];
 
   return sections
@@ -663,6 +782,73 @@ function studentGallerySections(items) {
       gallerySection(title, copy, items.filter((item) => item.status === status), false, status),
     )
     .join("");
+}
+
+function studentCombinations() {
+  const items = state.items
+    .filter((item) => item.ownerId === "anna")
+    .filter((item) => {
+      const recipe = normalizeRecipe(item.recipe);
+      return (
+        item.personalJournal ||
+        recipeCategories.some((category) => recipe[category.id].length) ||
+        recipe.note
+      );
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const shared = items.filter((item) => {
+    const sharing = normalizeSharing(item.sharing);
+    return sharing.combination && sharing.imageIds.length;
+  }).length;
+  const withFinal = items.filter((item) => normalizeFinalImages(item.finalImages).length).length;
+
+  return `
+    <div class="page-head combinations-page-head">
+      <div>
+        <p class="eyebrow">Prywatny dziennik ceramiczny</p>
+        <h1>Moje kombinacje</h1>
+        <p class="lead">Twoje gliny, szkliwa, temperatury, zdjęcia i wnioski w jednym miejscu. Każdy wpis jest prywatny, dopóki sama nie zdecydujesz się go udostępnić.</p>
+      </div>
+      <button class="primary-button" id="open-combination-flow" type="button"><span class="button-icon">+</span> Dodaj wpis</button>
+    </div>
+    <div class="combination-stats">
+      <div><strong>${items.length}</strong><span>zapisanych kombinacji</span></div>
+      <div><strong>${withFinal}</strong><span>z efektem finalnym</span></div>
+      <div><strong>${shared}</strong><span>udostępnionych pracowni</span></div>
+    </div>
+    <div class="privacy-note">
+      ${icon("palette")}
+      <div><strong>To jest Twój prywatny dziennik</strong><span>Otwórz wpis, aby zdecydować, czy udostępnić kombinację, notatkę i wybrane zdjęcia we wspólnym katalogu.</span></div>
+    </div>
+    ${
+      items.length
+        ? `<div class="combination-grid">${items.map(combinationCard).join("")}</div>`
+        : emptyState("Jeszcze bez kombinacji", "Dodaj notatkę zdobienia przy swoim wyrobie, a pojawi się tutaj.")
+    }
+  `;
+}
+
+function combinationCard(item) {
+  const recipe = normalizeRecipe(item.recipe);
+  const sharing = normalizeSharing(item.sharing);
+  const isShared = sharing.combination && sharing.imageIds.length;
+  const materials = [...recipe.clay, ...recipe.glazes, ...recipe.paints, ...recipe.temperature];
+  return `
+    <article class="combination-card" data-item-id="${item.id}" data-selectable="false" role="button" tabindex="0" aria-label="Otwórz kombinację ${escapeHtml(studentItemLabel(item))}">
+      <div class="combination-card-photo">
+        <img src="${displayItemImage(item)}" alt="" />
+        <span class="sharing-badge ${isShared ? "shared" : "private"}">${isShared ? "Udostępniona" : "Prywatna"}</span>
+      </div>
+      <div class="combination-card-body">
+        <small>${formatFullDate(item.date)}</small>
+        <h2>${escapeHtml(studentItemLabel(item))}</h2>
+        <div class="combination-tags">
+          ${materials.slice(0, 5).map((value) => `<span>${escapeHtml(value)}</span>`).join("")}
+        </div>
+        ${recipe.note ? `<p>${escapeHtml(recipe.note)}</p>` : ""}
+      </div>
+    </article>
+  `;
 }
 
 function gallerySection(title, copy, items, selectable, sectionId) {
@@ -947,10 +1133,13 @@ function catalogResults() {
   return state.items
     .filter((item) => {
       const recipe = normalizeRecipe(item.recipe);
+      const sharing = normalizeSharing(item.sharing);
       return (
+        sharing.combination &&
+        sharing.imageIds.length &&
+        sharedCatalogImage(item) &&
         recipe.glazes.length &&
-        recipe.clay.length &&
-        normalizeFinalImages(item.finalImages).length
+        recipe.clay.length
       );
     })
     .filter((item) => {
@@ -1009,6 +1198,7 @@ function catalogSelectionSummary() {
 
 function catalogResultCard(item) {
   const recipe = normalizeRecipe(item.recipe);
+  const sharing = normalizeSharing(item.sharing);
   const glazeLabels = recipe.glazes
     .map(glazeByName)
     .filter(Boolean)
@@ -1019,15 +1209,15 @@ function catalogResultCard(item) {
     .map((clay) => `${clay.brand} ${clay.code}`);
   return `
     <article class="catalog-result-card">
-      <img src="${displayItemImage(item)}" alt="Skatalogowany wyrób z pracowni" />
+      <img src="${sharedCatalogImage(item)}" alt="Skatalogowany wyrób z pracowni" />
       <div class="catalog-result-body">
         <span class="catalog-result-source">Realizacja z pracowni</span>
-        <h3>${item.name || `Wyrób z ${formatFullDate(item.date)}`}</h3>
+        <h3>Wyrób z ${formatFullDate(item.date)}</h3>
         <div class="catalog-result-tags">
           ${glazeLabels.map((label) => `<span class="glaze-tag">${label}</span>`).join("")}
           ${clayLabels.map((label) => `<span class="clay-tag">${label}</span>`).join("")}
         </div>
-        <p>${recipe.note ? escapeHtml(recipe.note) : "Skatalogowany przykład efektu po wypale."}</p>
+        <p>${sharing.note && recipe.note ? escapeHtml(recipe.note) : "Udostępniony przykład efektu po wypale."}</p>
       </div>
     </article>
   `;
@@ -1056,7 +1246,9 @@ function studentHistory() {
 }
 
 function notificationsView() {
-  const ready = state.items.filter((item) => item.ownerId === "anna" && item.status === "ready");
+  const ready = state.items.filter(
+    (item) => item.ownerId === "anna" && !item.personalJournal && item.status === "ready",
+  );
   return `
     <div class="page-head">
       <div>
@@ -1318,11 +1510,18 @@ function attachViewListeners() {
   });
 
   document.querySelector("#open-add-flow")?.addEventListener("click", openAddFlow);
-  document.querySelector("#open-journal-flow")?.addEventListener("click", openJournalFlow);
+  document
+    .querySelector("#open-journal-flow")
+    ?.addEventListener("click", () => openJournalFlow("instructor"));
+  document
+    .querySelector("#open-combination-flow")
+    ?.addEventListener("click", () => openJournalFlow("student"));
 
   document.querySelectorAll("[data-stat-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.studentFilter = button.dataset.statFilter;
+      state.studentItemsTab =
+        button.dataset.statFilter === "collected" ? "archive" : "studio";
       state.view = "my-items";
       saveState();
       render();
@@ -1333,6 +1532,15 @@ function attachViewListeners() {
   document.querySelectorAll("[data-student-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.studentFilter = button.dataset.studentFilter;
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-items-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.studentItemsTab = button.dataset.itemsTab;
+      if (state.studentItemsTab !== "studio") state.studentFilter = "all";
       saveState();
       render();
     });
@@ -1437,7 +1645,11 @@ function toggleCatalogFilter(type, value) {
 }
 
 function attachGalleryInteractions() {
-  document.querySelectorAll(".gallery-grid .item-card, .journal-grid .item-card").forEach((card) => {
+  document
+    .querySelectorAll(
+      ".gallery-grid .item-card, .journal-grid .item-card, .combination-grid .combination-card",
+    )
+    .forEach((card) => {
     const itemId = Number(card.dataset.itemId);
     const selectable = card.dataset.selectable === "true";
     let pressTimer;
@@ -1486,7 +1698,7 @@ function attachGalleryInteractions() {
         toggleSelection(itemId);
       }
     });
-  });
+    });
 }
 
 function openItemPreview(itemId) {
@@ -1495,6 +1707,7 @@ function openItemPreview(itemId) {
   const editable = canEditItem(item);
   const isStudentItem = state.role === "student" && item.ownerId === "anna";
   const isJournalItem = state.role === "instructor" && item.personalJournal;
+  const isPersonalEntry = item.personalJournal && editable;
   const canAddFinal =
     editable &&
     (item.status === "ready" ||
@@ -1507,7 +1720,7 @@ function openItemPreview(itemId) {
   modal.innerHTML = `
     <div class="modal-head preview-modal-head">
       <div>
-        <p class="eyebrow">${isStudentItem ? "Twój wyrób" : isJournalItem ? "Mój dziennik ceramiczny" : `Wyrób ${itemCode(item)}`}</p>
+        <p class="eyebrow">${isPersonalEntry ? "Prywatny dziennik ceramiczny" : isStudentItem ? "Twój wyrób" : `Wyrób ${itemCode(item)}`}</p>
         <h2 id="modal-title">${label}</h2>
       </div>
       <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
@@ -1522,7 +1735,7 @@ function openItemPreview(itemId) {
         isStudentItem || isJournalItem
           ? `<div class="student-item-intro">
                <strong>Historia tej konkretnej rzeczy</strong>
-               <span>${isJournalItem ? `${formatFullDate(item.date)} · prywatny wpis instruktora` : `${item.group} · numer pomocniczy pracowni ${itemCode(item)}`}</span>
+               <span>${isPersonalEntry ? `${formatFullDate(item.date)} · prywatny wpis w dzienniku` : `${item.group} · numer pomocniczy pracowni ${itemCode(item)}`}</span>
              </div>`
           : `<div class="preview-owner">
                <span class="avatar">${item.owner
@@ -1533,16 +1746,17 @@ function openItemPreview(itemId) {
              </div>`
       }
       <div class="preview-facts">
-        <div><small>Status</small><strong>${isJournalItem ? journalStageLabel(item.journalStage) : statusLabel(item.status)}</strong></div>
+        <div><small>Status</small><strong>${isPersonalEntry ? journalStageLabel(item.journalStage) : statusLabel(item.status)}</strong></div>
         <div><small>Wypał</small><strong>${firingLabel(item.firing)}</strong></div>
         <div><small>${isJournalItem ? "Dodano" : "Przyniesiono"}</small><strong>${formatDate(item.date)}</strong></div>
       </div>
       ${finalEffectSection(item, canAddFinal)}
       ${recipeSummary(item)}
+      ${(isStudentItem || isJournalItem) && editable ? sharingSection(item) : ""}
     </div>
     <div class="modal-foot preview-modal-foot">
       <button class="secondary-button close-modal" type="button">Zamknij podgląd</button>
-      ${isJournalItem && item.journalStage !== "finished" ? '<button class="secondary-button" id="mark-journal-finished" type="button">Oznacz jako gotowy</button>' : ""}
+      ${isPersonalEntry && item.journalStage !== "finished" ? '<button class="secondary-button" id="mark-journal-finished" type="button">Oznacz jako gotowy</button>' : ""}
       ${editable ? '<button class="primary-button" id="edit-recipe" type="button">Edytuj notatkę zdobienia</button>' : ""}
     </div>`;
   modal.querySelectorAll(".close-modal").forEach((button) => button.addEventListener("click", closeModal));
@@ -1550,7 +1764,7 @@ function openItemPreview(itemId) {
   modal.querySelector("#mark-journal-finished")?.addEventListener("click", () => {
     state.items = state.items.map((candidate) =>
       candidate.id === itemId
-        ? { ...candidate, journalStage: "finished", status: "collected", firedAt: "2026-06-10" }
+        ? { ...candidate, journalStage: "finished", status: "collected", firedAt: "2026-06-11" }
         : candidate,
     );
     saveState();
@@ -1566,6 +1780,27 @@ function openItemPreview(itemId) {
   });
   modal.querySelectorAll("[data-remove-final-image]").forEach((button) => {
     button.addEventListener("click", () => removeFinalImage(itemId, button.dataset.removeFinalImage));
+  });
+  modal.querySelector("#toggle-share-combination")?.addEventListener("click", () => {
+    updateItemSharing(itemId, (sharing) => ({
+      ...sharing,
+      combination: !sharing.combination,
+      note: sharing.combination ? false : sharing.note,
+    }));
+  });
+  modal.querySelector("#toggle-share-note")?.addEventListener("click", () => {
+    updateItemSharing(itemId, (sharing) => ({ ...sharing, note: !sharing.note }));
+  });
+  modal.querySelectorAll("[data-toggle-share-image]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const imageId = button.dataset.toggleShareImage;
+      updateItemSharing(itemId, (sharing) => ({
+        ...sharing,
+        imageIds: sharing.imageIds.includes(imageId)
+          ? sharing.imageIds.filter((candidate) => candidate !== imageId)
+          : [...sharing.imageIds, imageId],
+      }));
+    });
   });
   openModal();
 }
@@ -1635,7 +1870,7 @@ function addFinalImages(itemId, images) {
             ...images.map((image) => ({
               id: `final-${Date.now()}-${Math.random().toString(16).slice(2)}`,
               image,
-              date: "2026-06-10",
+              date: "2026-06-11",
             })),
           ],
         }
@@ -1652,6 +1887,10 @@ function removeFinalImage(itemId, imageId) {
       ? {
           ...item,
           finalImages: normalizeFinalImages(item.finalImages).filter((entry) => entry.id !== imageId),
+          sharing: {
+            ...normalizeSharing(item.sharing),
+            imageIds: normalizeSharing(item.sharing).imageIds.filter((id) => id !== imageId),
+          },
         }
       : item,
   );
@@ -1691,6 +1930,72 @@ function recipeSummary(item) {
       }
     </section>
   `;
+}
+
+function sharingSection(item) {
+  const sharing = normalizeSharing(item.sharing);
+  const recipe = normalizeRecipe(item.recipe);
+  const finalImages = normalizeFinalImages(item.finalImages);
+  const hasMaterials = recipeCategories.some((category) => recipe[category.id].length);
+  const published = sharing.combination && sharing.imageIds.length;
+  return `
+    <section class="sharing-section">
+      <div class="sharing-section-head">
+        <div>
+          <small>Wspólny katalog pracowni</small>
+          <h3>Co chcesz udostępnić?</h3>
+        </div>
+        <span class="sharing-badge ${published ? "shared" : "private"}">${published ? "Udostępnione" : "Prywatne"}</span>
+      </div>
+      <p>Twój wpis i zdjęcia są prywatne. Do katalogu trafią tylko elementy, które wybierzesz poniżej.</p>
+      <div class="sharing-options">
+        <button class="sharing-toggle ${sharing.combination ? "active" : ""}" id="toggle-share-combination" type="button" ${hasMaterials ? "" : "disabled"}>
+          <span class="sharing-check">${sharing.combination ? "✓" : ""}</span>
+          <span><strong>Kombinacja materiałów</strong><small>Glina, szkliwa, farby i temperatura</small></span>
+        </button>
+        <button class="sharing-toggle ${sharing.note ? "active" : ""}" id="toggle-share-note" type="button" ${sharing.combination && recipe.note ? "" : "disabled"}>
+          <span class="sharing-check">${sharing.note ? "✓" : ""}</span>
+          <span><strong>Treść mojej notatki</strong><small>Wnioski o warstwach i sposobie nakładania</small></span>
+        </button>
+      </div>
+      <div class="sharing-photo-picker">
+        <strong>Zdjęcia widoczne w katalogu</strong>
+        <div>
+          ${sharingPhotoOption("before", item.image, "Przed wypałem", sharing.imageIds)}
+          ${finalImages
+            .map((entry, index) =>
+              sharingPhotoOption(entry.id, entry.image, `Efekt finalny ${index + 1}`, sharing.imageIds),
+            )
+            .join("")}
+        </div>
+      </div>
+      ${
+        sharing.combination && !sharing.imageIds.length
+          ? '<p class="sharing-hint">Wybierz przynajmniej jedno zdjęcie, aby kombinacja pojawiła się w katalogu.</p>'
+          : ""
+      }
+    </section>
+  `;
+}
+
+function sharingPhotoOption(id, image, label, selectedIds) {
+  const selected = selectedIds.includes(id);
+  return `
+    <button class="sharing-photo ${selected ? "active" : ""}" data-toggle-share-image="${id}" type="button" aria-pressed="${selected}">
+      <img src="${image}" alt="" />
+      <span>${selected ? "✓ " : ""}${label}</span>
+    </button>
+  `;
+}
+
+function updateItemSharing(itemId, updater) {
+  state.items = state.items.map((item) =>
+    item.id === itemId
+      ? { ...item, sharing: normalizeSharing(updater(normalizeSharing(item.sharing))) }
+      : item,
+  );
+  saveState();
+  openItemPreview(itemId);
 }
 
 function openRecipeEditor(itemId) {
@@ -1816,9 +2121,15 @@ function recipeCategoryEditor(category) {
 function openGlazePreview(glazeId) {
   const glaze = initialGlazes.find((candidate) => candidate.id === glazeId);
   if (!glaze) return;
-  const examples = state.items.filter((item) =>
-    normalizeRecipe(item.recipe).glazes.includes(glaze.name),
-  );
+  const examples = state.items.filter((item) => {
+    const sharing = normalizeSharing(item.sharing);
+    return (
+      sharing.combination &&
+      sharing.imageIds.length &&
+      sharedCatalogImage(item) &&
+      normalizeRecipe(item.recipe).glazes.includes(glaze.name)
+    );
+  });
   const modal = document.querySelector("#modal");
   modal.innerHTML = `
     <div class="modal-head glaze-modal-head">
@@ -1853,7 +2164,7 @@ function openGlazePreview(glazeId) {
             ? `<div class="glaze-example-row">${examples
                 .map(
                   (item) =>
-                    `<img src="${displayItemImage(item)}" alt="${studentItemLabel(item)}" title="${studentItemLabel(item)}" />`,
+                    `<img src="${sharedCatalogImage(item)}" alt="Udostępniony przykład szkliwa" title="Udostępniony przykład szkliwa" />`,
                 )
                 .join("")}</div>`
             : "<p>Pierwsze przykłady pojawią się po zapisaniu szkliwa przy wyrobie.</p>"
@@ -1875,8 +2186,9 @@ function toggleSelection(id) {
   render();
 }
 
-function openJournalFlow() {
+function openJournalFlow(mode = "instructor") {
   journalDraft = {
+    mode,
     title: "",
     image: null,
     firing: "glaze",
@@ -1887,12 +2199,13 @@ function openJournalFlow() {
 }
 
 function renderJournalFlow() {
+  const isStudentEntry = journalDraft.mode === "student";
   const modal = document.querySelector("#modal");
   modal.innerHTML = `
     <div class="modal-head">
       <div>
-        <p class="eyebrow">Mój dziennik ceramiczny</p>
-        <h2 id="modal-title">Dodaj własny wyrób</h2>
+        <p class="eyebrow">${isStudentEntry ? "Moje kombinacje" : "Mój dziennik ceramiczny"}</p>
+        <h2 id="modal-title">${isStudentEntry ? "Dodaj wpis do dziennika" : "Dodaj własny wyrób"}</h2>
         <p>Na początek wystarczy zdjęcie i krótka nazwa. Recepturę uzupełnisz później.</p>
       </div>
       <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
@@ -1938,7 +2251,7 @@ function renderJournalFlow() {
     </div>
     <div class="modal-foot">
       <button class="secondary-button close-modal" type="button">Anuluj</button>
-      <button class="primary-button" id="save-journal-item" type="button" ${journalDraft.image ? "" : "disabled"}>Dodaj do dziennika</button>
+      <button class="primary-button" id="save-journal-item" type="button" ${journalDraft.image ? "" : "disabled"}>${isStudentEntry ? "Dodaj do Moich kombinacji" : "Dodaj do dziennika"}</button>
     </div>`;
 
   modal.querySelectorAll(".close-modal").forEach((button) => button.addEventListener("click", closeModal));
@@ -1976,29 +2289,35 @@ function renderJournalFlow() {
 function saveJournalItem() {
   const title = document.querySelector("#journal-title").value.trim();
   if (!journalDraft.image) return;
+  const isStudentEntry = journalDraft.mode === "student";
   const id = Math.max(100, ...state.items.map((item) => item.id)) + 1;
   state.items.push({
     id,
     code: `MC-${String(id).padStart(4, "0")}`,
-    name: title || `Próba z ${formatFullDate("2026-06-10")}`,
-    owner: "Marta Wiśniewska",
-    ownerId: "marta",
+    name: title || `Próba z ${formatFullDate("2026-06-11")}`,
+    owner: isStudentEntry ? "Anna Kowalska" : "Marta Wiśniewska",
+    ownerId: isStudentEntry ? "anna" : "marta",
     image: journalDraft.image,
     status: journalDraft.stage === "finished" ? "collected" : "waiting",
     firing: journalDraft.firing,
-    group: "Dziennik instruktora",
-    date: "2026-06-10",
-    firedAt: journalDraft.stage === "finished" ? "2026-06-10" : undefined,
+    group: isStudentEntry ? "Moje kombinacje" : "Dziennik instruktora",
+    date: "2026-06-11",
+    firedAt: journalDraft.stage === "finished" ? "2026-06-11" : undefined,
     personalJournal: true,
     journalStage: journalDraft.stage,
     finalImages: [],
+    sharing: normalizeSharing(),
     recipe: normalizeRecipe(),
   });
   saveState();
   closeModal();
-  state.view = "journal";
+  state.view = isStudentEntry ? "combinations" : "journal";
   render();
-  showToast("Wyrób został dodany do Twojego dziennika.");
+  showToast(
+    isStudentEntry
+      ? "Prywatny wpis został dodany do Moich kombinacji."
+      : "Wyrób został dodany do Twojego dziennika.",
+  );
 }
 
 function openAddFlow() {
@@ -2211,12 +2530,15 @@ function confirmNewItems() {
       group: "Dostawa 09.06",
       date: "2026-06-09",
       finalImages: [],
+      sharing: normalizeSharing(),
       recipe: normalizeRecipe(),
     };
   });
   state.items.push(...newItems);
   saveState();
   closeModal();
+  state.studentItemsTab = "studio";
+  state.studentFilter = "all";
   state.view = "my-items";
   render();
   showToast(`${newItems.length} ${pluralItems(newItems.length)} dodano do jednej dostawy.`);
