@@ -596,7 +596,6 @@ function studentHome() {
       <div>
         <p class="eyebrow">Czwartek, 11 czerwca</p>
         <h1>Dzień dobry, Aniu.</h1>
-        <p class="lead">Tu sprawdzisz, co dzieje się z Twoją ceramiką. Bez zgadywania i bez szukania wiadomości.</p>
       </div>
     </div>
 
@@ -604,7 +603,6 @@ function studentHome() {
       <article class="action-card">
         <p class="eyebrow">Nowa dostawa</p>
         <h2>Zostawiasz dziś ceramikę?</h2>
-        <p>Zrób wyraźne zdjęcie każdej sztuki. Całość zajmie mniej niż minutę.</p>
         <button class="primary-button" id="open-add-flow" type="button">
           <span class="button-icon">+</span>
           Dodaj moje wyroby
@@ -615,7 +613,6 @@ function studentHome() {
     <div class="section-head">
       <div>
         <h2>Twoja ceramika</h2>
-        <p>Aktualny stan wszystkich dodanych wyrobów</p>
       </div>
       <button class="ghost-button" data-view="my-items" type="button">Zobacz galerię →</button>
     </div>
@@ -644,7 +641,6 @@ function studentHome() {
       <div>
         <p class="eyebrow">Wspólna biblioteka Malina Ceramik</p>
         <h2>Szkliwa dostępne w pracowni</h2>
-        <p>To wspólny katalog inspiracji, nie Twój osobisty notatnik. Zobacz, jak szkliwa zachowywały się na różnych glinach i przy różnych temperaturach.</p>
       </div>
       <button class="primary-button" data-view="glazes" type="button">Zobacz szkliwa pracowni</button>
     </article>
@@ -679,7 +675,6 @@ function studentItems() {
       <div>
         <p class="eyebrow">Osobista galeria</p>
         <h1>Moje wyroby</h1>
-        <p class="lead">Każda sztuka ma własny status, nawet jeśli została przyniesiona razem z innymi.</p>
       </div>
       <button class="primary-button" id="open-add-flow" type="button"><span class="button-icon">+</span> Dodaj wyroby</button>
     </div>
@@ -807,7 +802,6 @@ function studentCombinations() {
       <div>
         <p class="eyebrow">Prywatny dziennik ceramiczny</p>
         <h1>Moje kombinacje</h1>
-        <p class="lead">Twoje gliny, szkliwa, temperatury, zdjęcia i wnioski w jednym miejscu. Każdy wpis jest prywatny, dopóki sama nie zdecydujesz się go udostępnić.</p>
       </div>
       <button class="primary-button" id="open-combination-flow" type="button"><span class="button-icon">+</span> Dodaj wpis</button>
     </div>
@@ -941,7 +935,6 @@ function instructorJournalView() {
       <div>
         <p class="eyebrow">Prywatna przestrzeń instruktora</p>
         <h1>Mój dziennik ceramiczny</h1>
-        <p class="lead">Własne próby, receptury i efekty wypałów. Te wpisy nie pojawiają się w kolejce ceramiki kursantów.</p>
       </div>
       <button class="primary-button" id="open-journal-flow" type="button"><span class="button-icon">+</span> Dodaj mój wyrób</button>
     </div>
@@ -959,7 +952,6 @@ function instructorJournalView() {
       <div>
         <p class="eyebrow">Biblioteka wspólna</p>
         <h2>Sprawdź szkliwa dostępne w pracowni</h2>
-        <p>Biblioteka pracowni jest oddzielona od Twojego prywatnego dziennika i receptur.</p>
       </div>
       <button class="secondary-button" data-view="glazes" type="button">Otwórz szkliwa pracowni</button>
     </article>
@@ -988,14 +980,12 @@ function glazeCatalogView() {
       <div>
         <p class="eyebrow">Wspólna biblioteka Malina Ceramik</p>
         <h1>Szkliwa pracowni</h1>
-        <p class="lead">Oficjalna biblioteka szkliw używanych w pracowni wraz z przykładami efektów wykonanych przez różne osoby.</p>
       </div>
     </div>
     <div class="catalog-identity">
       <div class="catalog-identity-icon">${icon("palette")}</div>
       <div>
         <strong>To katalog wspólny dla całej pracowni</strong>
-        <span>Twoje prywatne receptury i notatki znajdziesz przy zdjęciach w sekcji „Moje wyroby”${state.role === "instructor" ? " oraz w „Moim dzienniku”" : ""}.</span>
       </div>
     </div>
     <div class="catalog-notice">
@@ -1305,7 +1295,7 @@ function instructorGallery() {
       <div>
         <p class="eyebrow">Widok instruktora</p>
         <h1>Ceramika w pracowni</h1>
-        <p class="lead">Najstarsze wyroby są pierwsze. Kliknij zdjęcia, które właśnie wyszły z pieca.</p>
+        <p class="lead">Najstarsze wyroby są pierwsze.</p>
       </div>
     </div>
 
@@ -1743,7 +1733,6 @@ function openItemPreview(itemId) {
       <div class="item-preview-photo firing-${item.firing}" id="preview-swipe-area">
         <img id="preview-main-image" src="${previewImage}" alt="${label}, wyrób: ${item.owner}" />
         <div class="preview-history-strip">
-          <strong>Historia tej konkretnej rzeczy</strong>
           <span>${previewHistoryLine(item, isPersonalEntry)}</span>
         </div>
         <div class="preview-photo-badges">
@@ -2059,18 +2048,11 @@ function recipeSummary(item) {
 function inlineRecipeEditor(item) {
   return `
     <section class="inline-recipe">
-      <div class="inline-recipe-head">
-        <div>
-          <small>Mój dziennik wyrobu</small>
-          <h3>Jak powstał ten efekt?</h3>
-        </div>
-        <span>Zmiany zapisujesz przyciskiem na dole</span>
-      </div>
       <div class="inline-recipe-categories">
         ${recipeCategories.map(inlineRecipeCategory).join("")}
       </div>
       <label class="recipe-note-field inline-note-field">
-        <span>Krótka notatka</span>
+        <span>Notatka</span>
         <textarea id="inline-recipe-note" rows="3" placeholder="np. 3 cienkie warstwy, nakładane pędzlem">${escapeHtml(recipeDraft.note)}</textarea>
       </label>
     </section>
