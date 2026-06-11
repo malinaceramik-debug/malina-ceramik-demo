@@ -244,8 +244,6 @@ const initialItems = [
     group: "Dziennik instruktora",
     date: "2026-05-18",
     firedAt: "2026-05-26",
-    personalJournal: true,
-    journalStage: "finished",
     finalImages: [
       { id: "final-101-1", image: "assets/talerz.webp", date: "2026-05-27" },
     ],
@@ -272,8 +270,6 @@ const initialItems = [
     firing: "glaze",
     group: "Dziennik instruktora",
     date: "2026-06-06",
-    personalJournal: true,
-    journalStage: "making",
     finalImages: [],
     recipe: {
       clay: ["Czerwona kamionka"],
@@ -290,6 +286,7 @@ const initialState = {
   view: "home",
   studentFilter: "all",
   studentItemsTab: "studio",
+  instructorPersonalFilter: "all",
   combinationFilter: "all",
   instructorStatus: "all",
   instructorFiring: "all",
@@ -366,7 +363,7 @@ function showApplication(session) {
   state.role = session.role;
   if (
     (state.role === "student" && !["home", "my-items", "combinations", "glazes", "notifications"].includes(state.view)) ||
-    (state.role === "instructor" && !["gallery", "glazes", "journal", "settlements", "clients", "archive"].includes(state.view))
+    (state.role === "instructor" && !["gallery", "glazes", "journal", "notifications", "settlements", "clients", "archive"].includes(state.view))
   ) {
     state.view = state.role === "student" ? "home" : "gallery";
   }
@@ -410,6 +407,7 @@ function loadState() {
       const demoItem = initialItems.find((candidate) => candidate.id === item.id);
       const normalized = {
         ...item,
+        personalJournal: item.ownerId === "marta" ? false : item.personalJournal,
         code: item.code || `MC-${String(item.id).padStart(4, "0")}`,
         recipe: normalizeRecipe(item.recipe),
         finalImages: normalizeFinalImages(item.finalImages),
@@ -418,19 +416,15 @@ function loadState() {
       if (/^Wyrób \d+$/.test(normalized.name || "")) delete normalized.name;
       return normalized;
     });
-    if (!items.some((item) => item.personalJournal)) {
-      items = [
-        ...items,
-        ...initialItems
-          .filter((item) => item.personalJournal)
-          .map((item) => ({
-            ...structuredClone(item),
-            code: `MC-${String(item.id).padStart(4, "0")}`,
-            recipe: normalizeRecipe(item.recipe),
-            finalImages: normalizeFinalImages(item.finalImages),
-            sharing: normalizeSharing(item.sharing),
-          })),
-      ];
+    for (const demoItem of initialItems.filter((item) => item.ownerId === "marta")) {
+      if (items.some((item) => item.id === demoItem.id)) continue;
+      items.push({
+        ...structuredClone(demoItem),
+        code: `MC-${String(demoItem.id).padStart(4, "0")}`,
+        recipe: normalizeRecipe(demoItem.recipe),
+        finalImages: normalizeFinalImages(demoItem.finalImages),
+        sharing: normalizeSharing(demoItem.sharing),
+      });
     }
     const payments = [...(saved.payments || initialState.payments)];
     const demoStudentPayment = initialState.payments.find(
@@ -515,7 +509,8 @@ function navItems() {
   }
   return [
     { id: "gallery", label: "Do wypału", icon: "gallery" },
-    { id: "journal", label: "Mój dziennik", icon: "archive" },
+    { id: "journal", label: "Moja ceramika", icon: "gallery" },
+    { id: "notifications", label: "Powiadomienia", icon: "bell" },
     { id: "settlements", label: "Rozliczenia", icon: "money" },
     { id: "clients", label: "Kursanci", icon: "users" },
     { id: "archive", label: "Archiwum", icon: "archive" },
@@ -550,11 +545,16 @@ function studentItemLabel(item) {
   return item.personalTitle || item.name || `Wyrób z ${formatFullDate(item.date)}`;
 }
 
+function isOwnItem(item) {
+  return (
+    (state.role === "student" && item.ownerId === "anna") ||
+    (state.role === "instructor" && item.ownerId === "marta")
+  );
+}
+
 function visibleItemLabel(item) {
   if (item.personalJournal) return item.name || `Wpis z ${formatFullDate(item.date)}`;
-  return state.role === "student" && item.ownerId === "anna"
-    ? studentItemLabel(item)
-    : itemCode(item);
+  return isOwnItem(item) ? studentItemLabel(item) : itemCode(item);
 }
 
 function displayItemImage(item) {
@@ -570,10 +570,7 @@ function sharedCatalogImage(item) {
 }
 
 function canEditItem(item) {
-  return (
-    (state.role === "student" && item.ownerId === "anna") ||
-    (state.role === "instructor" && item.personalJournal && item.ownerId === "marta")
-  );
+  return isOwnItem(item);
 }
 
 function firingLegend() {
@@ -622,15 +619,19 @@ function pluralItems(count) {
 
 function renderNav() {
   const items = navItems();
-  const markup = items
-    .map(
-      (item) => `
+  const makeMarkup = (navItemsToRender) =>
+    navItemsToRender
+      .map(
+        (item) => `
         <button class="nav-button ${state.view === item.id ? "active" : ""}" data-view="${item.id}" type="button">
           ${icon(item.icon)}
           <span>${item.label}</span>
         </button>`,
-    )
-    .join("");
+      )
+      .join("");
+  const markup = makeMarkup(items);
+  const mobileItems =
+    state.role === "instructor" ? items.filter((item) => item.id !== "archive") : items;
   const utilityItem = utilityNavItem();
   const utilityMarkup =
     state.role === "instructor"
@@ -643,7 +644,7 @@ function renderNav() {
       : "";
   document.querySelector("#desktop-nav").innerHTML = markup;
   document.querySelector("#desktop-utility-nav").innerHTML = utilityMarkup;
-  document.querySelector("#mobile-nav").innerHTML = markup;
+  document.querySelector("#mobile-nav").innerHTML = makeMarkup(mobileItems);
 }
 
 function renderProfile() {
@@ -678,7 +679,8 @@ function render() {
   } else {
     if (state.view === "gallery") content.innerHTML = instructorGallery();
     else if (state.view === "glazes") content.innerHTML = glazeCatalogView();
-    else if (state.view === "journal") content.innerHTML = instructorJournalView();
+    else if (state.view === "journal") content.innerHTML = instructorCeramicsView();
+    else if (state.view === "notifications") content.innerHTML = notificationsView();
     else if (state.view === "settlements") content.innerHTML = settlementsView();
     else if (state.view === "clients") content.innerHTML = clientsView();
     else content.innerHTML = instructorArchive();
@@ -1006,7 +1008,7 @@ function gallerySection(title, copy, items, selectable, sectionId) {
 function itemCard(item, selectable) {
   const selected = state.selected.includes(item.id);
   const label = visibleItemLabel(item);
-  const isStudentItem = state.role === "student" && item.ownerId === "anna";
+  const isStudentItem = isOwnItem(item) && !item.personalJournal;
   const isJournalItem = state.role === "instructor" && item.personalJournal;
   const groupItems = state.items
     .filter((candidate) => candidate.ownerId === item.ownerId && candidate.group === item.group)
@@ -1060,40 +1062,59 @@ function journalStageLabel(stage) {
   return stage === "finished" ? "Gotowy" : "W trakcie";
 }
 
-function instructorJournalView() {
+function instructorCeramicsView() {
   const items = state.items
-    .filter((item) => item.personalJournal && item.ownerId === "marta")
-    .sort((a, b) => b.date.localeCompare(a.date));
-  const finished = items.filter((item) => item.journalStage === "finished").length;
-  const withRecipes = items.filter((item) => {
-    const recipe = normalizeRecipe(item.recipe);
-    return recipeCategories.some((category) => recipe[category.id].length) || recipe.note;
-  }).length;
+    .filter((item) => item.ownerId === "marta")
+    .filter(
+      (item) =>
+        state.instructorPersonalFilter === "all" ||
+        item.status === state.instructorPersonalFilter,
+    )
+    .sort((a, b) => {
+      const priority = { ready: 0, waiting: 1, collected: 2 };
+      return priority[a.status] - priority[b.status] || b.date.localeCompare(a.date);
+    });
+  const allItems = state.items.filter((item) => item.ownerId === "marta");
+  const filters = [
+    ["all", "Wszystkie"],
+    ["ready", "Do odbioru"],
+    ["waiting", "Czekają"],
+    ["collected", "Odebrane"],
+  ];
 
   return `
-    <div class="page-head journal-page-head">
-      <div>
-        <p class="eyebrow">Prywatna przestrzeń instruktora</p>
-        <h1>Mój dziennik ceramiczny</h1>
+    <div class="student-items-page instructor-own-items">
+      <div class="page-head my-items-head">
+        <div>
+          <p class="eyebrow">Prywatna przestrzeń instruktora</p>
+          <h1>Moja ceramika</h1>
+        </div>
+        <button class="primary-button my-items-add" id="open-add-flow" type="button"><span class="button-icon">+</span> <span>Dodaj</span></button>
       </div>
-      <button class="primary-button" id="open-journal-flow" type="button"><span class="button-icon">+</span> Dodaj mój wyrób</button>
+      <div class="my-items-navigation">
+        <span>${allItems.length} ${pluralItems(allItems.length)}</span>
+      </div>
+      <div class="my-items-filter-row" aria-label="Filtr statusu">
+        ${filters
+          .map(
+            ([id, label]) =>
+              `<button class="filter-chip quiet-filter status-filter ${id} ${state.instructorPersonalFilter === id ? "active" : ""}" data-personal-filter="${id}" type="button">${label}</button>`,
+          )
+          .join("")}
+      </div>
+      <p class="gallery-gesture-hint">Przytrzymaj zdjęcie, aby otworzyć podgląd.</p>
+      ${
+        items.length
+          ? studentGallerySections(items)
+          : emptyState("Tu jest pusto", "Zmień filtr albo dodaj nowy wyrób.")
+      }
     </div>
-    <div class="journal-stats">
-      <div><strong>${items.length}</strong><span>wszystkich prób</span></div>
-      <div><strong>${finished}</strong><span>gotowych efektów</span></div>
-      <div><strong>${withRecipes}</strong><span>zapisanych receptur</span></div>
-    </div>
-    ${
-      items.length
-        ? `<div class="items-grid journal-grid">${items.map((item) => itemCard(item, false)).join("")}</div>`
-        : emptyState("Dziennik jest pusty", "Dodaj pierwszą własną próbę ceramiczną.")
-    }
     <article class="catalog-teaser journal-catalog-teaser">
       <div>
-        <p class="eyebrow">Biblioteka wspólna</p>
-        <h2>Sprawdź efekty innych osób</h2>
+        <p class="eyebrow">Wspólna biblioteka</p>
+        <h2>Porównaj swoje efekty z innymi</h2>
       </div>
-      <button class="secondary-button" data-view="glazes" type="button">Otwórz bibliotekę szkliw</button>
+      <button class="secondary-button" data-view="glazes" type="button">Wspólne kombinacje</button>
     </article>
   `;
 }
@@ -1404,8 +1425,9 @@ function studentHistory() {
 }
 
 function notificationsView() {
+  const ownerId = state.role === "student" ? "anna" : "marta";
   const ready = state.items.filter(
-    (item) => item.ownerId === "anna" && !item.personalJournal && item.status === "ready",
+    (item) => item.ownerId === ownerId && !item.personalJournal && item.status === "ready",
   );
   return `
     <div class="page-head">
@@ -1425,7 +1447,7 @@ function notificationsView() {
                     <div class="history-row">
                       <div class="history-icon">${icon("bell")}</div>
                       <div>
-                        <strong>${itemLabel(item)} jest gotowy do odbioru</strong>
+                        <strong>${studentItemLabel(item)} jest gotowy do odbioru</strong>
                         <small>Wypalono ${formatDate(item.firedAt || "2026-06-08")} · ${firingLabel(item.firing)}</small>
                       </div>
                       <span class="status-pill ready">Nowe</span>
@@ -1694,6 +1716,14 @@ function attachViewListeners() {
     });
   });
 
+  document.querySelectorAll("[data-personal-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.instructorPersonalFilter = button.dataset.personalFilter;
+      saveState();
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-items-tab]").forEach((button) => {
     button.addEventListener("click", () => {
       state.studentItemsTab = button.dataset.itemsTab;
@@ -1925,7 +1955,7 @@ function openItemPreview(itemId) {
   const item = state.items.find((candidate) => candidate.id === itemId);
   if (!item) return;
   const editable = canEditItem(item);
-  const isStudentItem = state.role === "student" && item.ownerId === "anna";
+  const isStudentItem = isOwnItem(item) && !item.personalJournal;
   const isJournalItem = state.role === "instructor" && item.personalJournal;
   const isPersonalEntry = item.personalJournal && editable;
   const previewItems = previewNavigationItems(item);
@@ -2059,7 +2089,7 @@ function previewHistoryLine(item, isPersonalEntry) {
   if (isPersonalEntry) {
     return `${formatFullDate(item.date)} · ${journalStageLabel(item.journalStage)} · prywatny wpis`;
   }
-  if (state.role === "student" && item.ownerId === "anna") {
+  if (isOwnItem(item)) {
     return `${item.group} · ${firingLabel(item.firing)} · numer pomocniczy pracowni ${itemCode(item)}`;
   }
   return `${item.owner} · ${item.group} · ${formatFullDate(item.date)}`;
@@ -2996,19 +3026,24 @@ function photoGrid(mode) {
 }
 
 function confirmNewItems() {
-  let nextId = Math.max(0, ...state.items.filter((item) => !item.personalJournal).map((item) => item.id)) + 1;
+  const ownerId = state.role === "student" ? "anna" : "marta";
+  const owner = state.role === "student" ? "Anna Kowalska" : "Marta Wiśniewska";
+  let nextId =
+    state.role === "student"
+      ? Math.max(0, ...state.items.filter((item) => item.id < 100).map((item) => item.id)) + 1
+      : Math.max(100, ...state.items.map((item) => item.id)) + 1;
   const newItems = addFlow.photos.map((photo) => {
     const id = nextId++;
     return {
       id,
       code: `MC-${String(id).padStart(4, "0")}`,
-      owner: "Anna Kowalska",
-      ownerId: "anna",
+      owner,
+      ownerId,
       image: photo.image,
       status: "waiting",
       firing: photo.firing,
-      group: "Dostawa 09.06",
-      date: "2026-06-09",
+      group: state.role === "student" ? "Dostawa 09.06" : "Dostawa instruktora 11.06",
+      date: state.role === "student" ? "2026-06-09" : "2026-06-11",
       finalImages: [],
       sharing: normalizeSharing(),
       recipe: normalizeRecipe(),
@@ -3017,9 +3052,14 @@ function confirmNewItems() {
   state.items.push(...newItems);
   saveState();
   closeModal();
-  state.studentItemsTab = "studio";
-  state.studentFilter = "all";
-  state.view = "my-items";
+  if (state.role === "student") {
+    state.studentItemsTab = "studio";
+    state.studentFilter = "all";
+    state.view = "my-items";
+  } else {
+    state.instructorPersonalFilter = "all";
+    state.view = "journal";
+  }
   render();
   showToast(`${newItems.length} ${pluralItems(newItems.length)} dodano do jednej dostawy.`);
 }
