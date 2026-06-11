@@ -631,7 +631,11 @@ function renderNav() {
       .join("");
   const markup = makeMarkup(items);
   const mobileItems =
-    state.role === "instructor" ? items.filter((item) => item.id !== "archive") : items;
+    state.role === "instructor"
+      ? ["settlements", "clients", "gallery", "journal", "notifications"].map((id) =>
+          items.find((item) => item.id === id),
+        )
+      : items;
   const utilityItem = utilityNavItem();
   const utilityMarkup =
     state.role === "instructor"

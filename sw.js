@@ -1,4 +1,4 @@
-const CACHE = "malina-ceramik-demo-v26";
+const CACHE = "malina-ceramik-demo-v27";
 const ASSETS = [
   "./",
   "index.html",
