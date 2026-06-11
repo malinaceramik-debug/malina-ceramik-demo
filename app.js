@@ -297,6 +297,7 @@ const initialState = {
   search: "",
   selected: [],
   items: initialItems,
+  emailEvents: [],
   customMaterialOptions: {
     clay: [],
     glazes: [],
@@ -341,6 +342,7 @@ let finalPhotoTargetId = null;
 let journalDraft = null;
 let combinationShareMode = false;
 let combinationShareSelection = [];
+let guestLoginActive = false;
 let toastTimer;
 
 function currentSession() {
@@ -352,10 +354,13 @@ function currentSession() {
 }
 
 function showLogin() {
+  clearTimeout(toastTimer);
+  document.querySelector("#toast").classList.add("hidden");
   document.querySelector("#login-screen").classList.remove("hidden");
   document.querySelector("#app-shell").classList.add("hidden");
   document.querySelector("#mobile-nav").classList.add("hidden");
   document.body.classList.add("login-visible");
+  document.body.classList.remove("guest-mode");
   document.querySelector("#login-email").focus();
 }
 
@@ -363,14 +368,17 @@ function showApplication(session) {
   state.role = session.role;
   if (
     (state.role === "student" && !["home", "my-items", "combinations", "glazes", "notifications"].includes(state.view)) ||
-    (state.role === "instructor" && !["gallery", "glazes", "journal", "combinations", "notifications", "settlements", "clients", "archive"].includes(state.view))
+    (state.role === "instructor" && !["gallery", "glazes", "journal", "combinations", "notifications", "settlements", "clients", "archive"].includes(state.view)) ||
+    (state.role === "guest" && state.view !== "guest-items")
   ) {
-    state.view = state.role === "student" ? "home" : "gallery";
+    state.view =
+      state.role === "student" ? "home" : state.role === "instructor" ? "gallery" : "guest-items";
   }
   document.querySelector("#login-screen").classList.add("hidden");
   document.querySelector("#app-shell").classList.remove("hidden");
-  document.querySelector("#mobile-nav").classList.remove("hidden");
+  document.querySelector("#mobile-nav").classList.toggle("hidden", state.role === "guest");
   document.body.classList.remove("login-visible");
+  document.body.classList.toggle("guest-mode", state.role === "guest");
   render();
 }
 
@@ -392,10 +400,51 @@ function login(email, password) {
   showApplication(session);
 }
 
+function guestOwnerId(email) {
+  return `guest:${email.trim().toLowerCase()}`;
+}
+
+function loginAsGuest(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const emailInput = document.querySelector("#login-email");
+  if (!normalizedEmail || !emailInput.checkValidity()) {
+    const error = document.querySelector("#login-error");
+    error.textContent = "Wpisz poprawny adres e-mail.";
+    error.classList.remove("hidden");
+    return;
+  }
+  const session = {
+    email: normalizedEmail,
+    role: "guest",
+    name: "Gość",
+    ownerId: guestOwnerId(normalizedEmail),
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  state.role = "guest";
+  state.view = "guest-items";
+  saveState();
+  document.querySelector("#login-error").classList.add("hidden");
+  showApplication(session);
+}
+
+function setGuestLogin(active) {
+  guestLoginActive = active;
+  const toggle = document.querySelector("#guest-login-toggle");
+  toggle.classList.toggle("active", active);
+  toggle.setAttribute("aria-pressed", String(active));
+  document.querySelector("#login-password-field").classList.toggle("hidden", active);
+  document.querySelector("#demo-login").classList.toggle("hidden", active);
+  document.querySelector("#login-title").textContent = active ? "Wejdź jako gość" : "Witaj ponownie";
+  document.querySelector("#login-submit").textContent = active ? "Przejdź do swoich wyrobów" : "Zaloguj się";
+  document.querySelector("#login-error").classList.add("hidden");
+  if (active) document.querySelector("#login-email").focus();
+}
+
 function logout() {
   localStorage.removeItem(SESSION_KEY);
   document.querySelector("#profile-menu").classList.add("hidden");
   document.querySelector("#login-form").reset();
+  setGuestLogin(false);
   showLogin();
 }
 
@@ -441,6 +490,7 @@ function loadState() {
       ...saved,
       studentItemsTab: saved.studentItemsTab === "payments" ? "payments" : "studio",
       items,
+      emailEvents: Array.isArray(saved.emailEvents) ? saved.emailEvents : [],
       payments,
     };
   } catch {
@@ -498,6 +548,7 @@ function icon(name) {
 }
 
 function navItems() {
+  if (state.role === "guest") return [];
   if (state.role === "student") {
     return [
       { id: "home", label: "Początek", icon: "home" },
@@ -546,9 +597,11 @@ function studentItemLabel(item) {
 }
 
 function isOwnItem(item) {
+  const session = currentSession();
   return (
     (state.role === "student" && item.ownerId === "anna") ||
-    (state.role === "instructor" && item.ownerId === "marta")
+    (state.role === "instructor" && item.ownerId === "marta") ||
+    (state.role === "guest" && item.ownerId === session?.ownerId)
   );
 }
 
@@ -570,7 +623,7 @@ function sharedCatalogImage(item) {
 }
 
 function canEditItem(item) {
-  return isOwnItem(item);
+  return isOwnItem(item) && state.role !== "guest";
 }
 
 function firingLegend() {
@@ -657,17 +710,27 @@ function renderNav() {
 
 function renderProfile() {
   const isStudent = state.role === "student";
+  const isGuest = state.role === "guest";
   const session = currentSession();
-  document.querySelector("#avatar").textContent = isStudent ? "AK" : "MW";
-  document.querySelector("#profile-name").textContent = isStudent
-    ? "Anna Kowalska"
-    : "Marta Wiśniewska";
-  document.querySelector("#profile-role").textContent = isStudent ? "Kursantka" : "Instruktorka";
-  document.querySelector("#profile-menu-name").textContent = isStudent
-    ? "Anna Kowalska"
-    : "Marta Wiśniewska";
+  document.querySelector("#avatar").textContent = isGuest ? "G" : isStudent ? "AK" : "MW";
+  document.querySelector("#profile-name").textContent = isGuest
+    ? "Gość"
+    : isStudent
+      ? "Anna Kowalska"
+      : "Marta Wiśniewska";
+  document.querySelector("#profile-role").textContent = isGuest
+    ? "Wypał gościnny"
+    : isStudent
+      ? "Kursantka"
+      : "Instruktorka";
+  document.querySelector("#profile-menu-name").textContent = isGuest
+    ? "Gość"
+    : isStudent
+      ? "Anna Kowalska"
+      : "Marta Wiśniewska";
   document.querySelector("#profile-menu-email").textContent =
     session?.email || (isStudent ? "anna@malinaceramik.pl" : "marta@malinaceramik.pl");
+  document.querySelector(".role-switch").classList.toggle("hidden", isGuest);
   document.querySelectorAll("[data-role]").forEach((button) => {
     button.classList.toggle("active", button.dataset.role === state.role);
   });
@@ -678,7 +741,9 @@ function render() {
   renderProfile();
   const content = document.querySelector("#app-content");
 
-  if (state.role === "student") {
+  if (state.role === "guest") {
+    content.innerHTML = guestItemsView();
+  } else if (state.role === "student") {
     if (state.view === "home") content.innerHTML = studentHome();
     else if (state.view === "my-items") content.innerHTML = studentItems();
     else if (state.view === "combinations") content.innerHTML = studentCombinations();
@@ -696,6 +761,56 @@ function render() {
   }
 
   attachViewListeners();
+}
+
+function guestItemsView() {
+  const session = currentSession();
+  const mine = state.items
+    .filter((item) => item.ownerId === session?.ownerId)
+    .sort((a, b) => {
+      const priority = { ready: 0, waiting: 1, collected: 2 };
+      return priority[a.status] - priority[b.status] || b.date.localeCompare(a.date);
+    });
+  const messages = (state.emailEvents || [])
+    .filter((event) => event.email === session?.email)
+    .slice()
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 2);
+
+  return `
+    <div class="student-items-page guest-items-page">
+      <div class="page-head my-items-head">
+        <div>
+          <p class="eyebrow">Wypał gościnny</p>
+          <h1>Twoja ceramika</h1>
+        </div>
+        <button class="primary-button my-items-add" id="open-add-flow" type="button"><span class="button-icon">+</span> <span>Dodaj</span></button>
+      </div>
+      <div class="my-items-navigation">
+        <span>${escapeHtml(session?.email || "")}</span>
+      </div>
+      ${messages.map(guestEmailMessage).join("")}
+      <p class="gallery-gesture-hint">Przytrzymaj zdjęcie, aby otworzyć podgląd.</p>
+      ${
+        mine.length
+          ? studentGallerySections(mine)
+          : emptyState("Nie masz jeszcze dodanych wyrobów", "Dodaj zdjęcie ceramiki, którą zostawiasz do wypału.")
+      }
+    </div>
+  `;
+}
+
+function guestEmailMessage(event) {
+  const fired = event.type === "fired";
+  return `
+    <div class="guest-email-note">
+      ${icon("bell")}
+      <div>
+        <strong>${fired ? "Ceramika została wypalona" : "Ceramika została dodana"}</strong>
+        <span>Demo wiadomości wysłanej na ${escapeHtml(event.email)}.</span>
+      </div>
+    </div>
+  `;
 }
 
 function studentHome() {
@@ -3041,8 +3156,19 @@ function photoGrid(mode) {
 }
 
 function confirmNewItems() {
-  const ownerId = state.role === "student" ? "anna" : "marta";
-  const owner = state.role === "student" ? "Anna Kowalska" : "Marta Wiśniewska";
+  const session = currentSession();
+  const ownerId =
+    state.role === "student"
+      ? "anna"
+      : state.role === "instructor"
+        ? "marta"
+        : session.ownerId;
+  const owner =
+    state.role === "student"
+      ? "Anna Kowalska"
+      : state.role === "instructor"
+        ? "Marta Wiśniewska"
+        : session.email;
   let nextId =
     state.role === "student"
       ? Math.max(0, ...state.items.filter((item) => item.id < 100).map((item) => item.id)) + 1
@@ -3054,10 +3180,16 @@ function confirmNewItems() {
       code: `MC-${String(id).padStart(4, "0")}`,
       owner,
       ownerId,
+      ownerEmail: state.role === "guest" ? session.email : undefined,
       image: photo.image,
       status: "waiting",
       firing: photo.firing,
-      group: state.role === "student" ? "Dostawa 09.06" : "Dostawa instruktora 11.06",
+      group:
+        state.role === "student"
+          ? "Dostawa 09.06"
+          : state.role === "instructor"
+            ? "Dostawa instruktora 11.06"
+            : "Wypał gościnny 11.06",
       date: state.role === "student" ? "2026-06-09" : "2026-06-11",
       finalImages: [],
       sharing: normalizeSharing(),
@@ -3065,18 +3197,33 @@ function confirmNewItems() {
     };
   });
   state.items.push(...newItems);
+  if (state.role === "guest") {
+    state.emailEvents.unshift({
+      id: `email-added-${Date.now()}`,
+      type: "added",
+      email: session.email,
+      itemIds: newItems.map((item) => item.id),
+      createdAt: Date.now(),
+    });
+  }
   saveState();
   closeModal();
   if (state.role === "student") {
     state.studentItemsTab = "studio";
     state.studentFilter = "all";
     state.view = "my-items";
-  } else {
+  } else if (state.role === "instructor") {
     state.instructorPersonalFilter = "all";
     state.view = "journal";
+  } else {
+    state.view = "guest-items";
   }
   render();
-  showToast(`${newItems.length} ${pluralItems(newItems.length)} dodano do jednej dostawy.`);
+  showToast(
+    state.role === "guest"
+      ? `${newItems.length} ${pluralItems(newItems.length)} dodano. Potwierdzenie e-mail jest gotowe.`
+      : `${newItems.length} ${pluralItems(newItems.length)} dodano do jednej dostawy.`,
+  );
 }
 
 function openFiredConfirmation() {
@@ -3084,7 +3231,7 @@ function openFiredConfirmation() {
   const modal = document.querySelector("#modal");
   modal.innerHTML = `
     <div class="modal-head">
-      <div><h2 id="modal-title">Potwierdź wypał</h2><p>Ta operacja wyśle powiadomienia kursantom.</p></div>
+      <div><h2 id="modal-title">Potwierdź wypał</h2><p>Ta operacja przygotuje powiadomienia właścicielom.</p></div>
       <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
     </div>
     <div class="modal-body">
@@ -3105,16 +3252,31 @@ function openFiredConfirmation() {
 
 function confirmFired() {
   const count = state.selected.length;
+  const firedItems = state.items.filter((item) => state.selected.includes(item.id));
   state.items = state.items.map((item) =>
     state.selected.includes(item.id)
       ? { ...item, status: "ready", firedAt: "2026-06-09" }
       : item,
   );
+  const guestEmails = [...new Set(firedItems.map((item) => item.ownerEmail).filter(Boolean))];
+  guestEmails.forEach((email) => {
+    state.emailEvents.unshift({
+      id: `email-fired-${Date.now()}-${email}`,
+      type: "fired",
+      email,
+      itemIds: firedItems.filter((item) => item.ownerEmail === email).map((item) => item.id),
+      createdAt: Date.now(),
+    });
+  });
   state.selected = [];
   saveState();
   closeModal();
   render();
-  showToast(`${count} ${pluralItems(count)} oznaczono jako wypalone. Powiadomienia są gotowe.`);
+  showToast(
+    guestEmails.length
+      ? `${count} ${pluralItems(count)} oznaczono jako wypalone. E-mail do gościa jest gotowy.`
+      : `${count} ${pluralItems(count)} oznaczono jako wypalone. Powiadomienia są gotowe.`,
+  );
 }
 
 function updatePrice() {
@@ -3202,10 +3364,22 @@ document.querySelectorAll("[data-role]").forEach((button) => {
 
 document.querySelector("#login-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  login(
-    document.querySelector("#login-email").value,
-    document.querySelector("#login-password").value,
-  );
+  if (guestLoginActive) {
+    loginAsGuest(document.querySelector("#login-email").value);
+  } else {
+    login(
+      document.querySelector("#login-email").value,
+      document.querySelector("#login-password").value,
+    );
+  }
+});
+
+document.querySelector("#guest-login-toggle").addEventListener("click", () => {
+  setGuestLogin(!guestLoginActive);
+});
+
+document.querySelector("#login-email").addEventListener("input", () => {
+  document.querySelector("#login-error").classList.add("hidden");
 });
 
 document.querySelector("#toggle-password").addEventListener("click", (event) => {
@@ -3218,6 +3392,7 @@ document.querySelector("#toggle-password").addEventListener("click", (event) => 
 
 document.querySelectorAll("[data-demo-login]").forEach((button) => {
   button.addEventListener("click", () => {
+    setGuestLogin(false);
     const student = button.dataset.demoLogin === "student";
     document.querySelector("#login-email").value = student
       ? "anna@malinaceramik.pl"
@@ -3311,5 +3486,12 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
 }
 
 const savedSession = currentSession();
-if (savedSession && demoAccounts[savedSession.email]) showApplication(savedSession);
-else showLogin();
+if (
+  savedSession &&
+  (demoAccounts[savedSession.email] ||
+    (savedSession.role === "guest" && savedSession.email && savedSession.ownerId))
+) {
+  showApplication(savedSession);
+} else {
+  showLogin();
+}

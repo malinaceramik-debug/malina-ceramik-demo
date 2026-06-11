@@ -30,13 +30,17 @@
             <img src="assets/malina-wordmark.png" alt="Malina ceramik, studio ceramiki" />
           </div>
           <p class="eyebrow">Aplikacja pracowni</p>
-          <h2>Witaj ponownie</h2>
+          <h2 id="login-title">Witaj ponownie</h2>
+          <button class="guest-login-toggle" id="guest-login-toggle" type="button" aria-pressed="false">
+            <span class="guest-toggle-check" aria-hidden="true"></span>
+            <span>Wejdź jako gość</span>
+          </button>
           <form class="login-form" id="login-form" novalidate>
             <label class="login-field">
               <span>Adres e-mail</span>
               <input id="login-email" name="email" type="email" autocomplete="email" placeholder="twoj@email.pl" required />
             </label>
-            <label class="login-field">
+            <label class="login-field" id="login-password-field">
               <span>Hasło</span>
               <span class="password-input">
                 <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
@@ -44,9 +48,9 @@
               </span>
             </label>
             <p class="login-error hidden" id="login-error" role="alert"></p>
-            <button class="primary-button login-submit" type="submit">Zaloguj się</button>
+            <button class="primary-button login-submit" id="login-submit" type="submit">Zaloguj się</button>
           </form>
-          <div class="demo-login">
+          <div class="demo-login" id="demo-login">
             <span>Wersja demo</span>
             <div>
               <button data-demo-login="student" type="button">Kursant</button>
