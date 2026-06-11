@@ -632,7 +632,7 @@ function renderNav() {
   const markup = makeMarkup(items);
   const mobileItems =
     state.role === "instructor"
-      ? ["settlements", "clients", "gallery", "journal", "notifications"].map((id) =>
+      ? ["gallery", "settlements", "clients", "journal", "notifications"].map((id) =>
           items.find((item) => item.id === id),
         )
       : items;
