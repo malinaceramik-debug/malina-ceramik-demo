@@ -4308,8 +4308,12 @@ h2 {
 
   .role-option {
     min-height: 34px;
-    padding: 0 10px;
-    font-size: 10px;
+    padding: 0 7px;
+    font-size: 9px;
+  }
+
+  .mobile-wordmark {
+    width: 70px;
   }
 
   .profile-copy,

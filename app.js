@@ -353,6 +353,10 @@ function currentSession() {
   }
 }
 
+function isRestrictedGuestSession(session = currentSession()) {
+  return session?.role === "guest" && session.guestAccess !== false;
+}
+
 function showLogin() {
   clearTimeout(toastTimer);
   document.querySelector("#toast").classList.add("hidden");
@@ -418,6 +422,7 @@ function loginAsGuest(email) {
     role: "guest",
     name: "Gość",
     ownerId: guestOwnerId(normalizedEmail),
+    guestAccess: true,
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   state.role = "guest";
@@ -730,7 +735,9 @@ function renderProfile() {
       : "Marta Wiśniewska";
   document.querySelector("#profile-menu-email").textContent =
     session?.email || (isStudent ? "anna@malinaceramik.pl" : "marta@malinaceramik.pl");
-  document.querySelector(".role-switch").classList.toggle("hidden", isGuest);
+  document
+    .querySelector(".role-switch")
+    .classList.toggle("hidden", isRestrictedGuestSession(session));
   document.querySelectorAll("[data-role]").forEach((button) => {
     button.classList.toggle("active", button.dataset.role === state.role);
   });
@@ -3337,25 +3344,43 @@ function showToast(message) {
 document.querySelectorAll("[data-role]").forEach((button) => {
   button.addEventListener("click", () => {
     state.role = button.dataset.role;
-    state.view = state.role === "student" ? "home" : "gallery";
+    state.view =
+      state.role === "student" ? "home" : state.role === "instructor" ? "gallery" : "guest-items";
     state.selected = [];
     combinationShareMode = false;
     combinationShareSelection = [];
     const session = currentSession();
     if (session) {
+      const previewProfile =
+        state.role === "student"
+          ? {
+              email: "anna@malinaceramik.pl",
+              name: "Anna Kowalska",
+              ownerId: undefined,
+            }
+          : state.role === "instructor"
+            ? {
+                email: "marta@malinaceramik.pl",
+                name: "Marta Wiśniewska",
+                ownerId: undefined,
+              }
+            : {
+                email: "gosc.demo@malinaceramik.pl",
+                name: "Gość",
+                ownerId: guestOwnerId("gosc.demo@malinaceramik.pl"),
+              };
       localStorage.setItem(
         SESSION_KEY,
         JSON.stringify({
           ...session,
           role: state.role,
-          email:
-            state.role === "student"
-              ? "anna@malinaceramik.pl"
-              : "marta@malinaceramik.pl",
-          name: state.role === "student" ? "Anna Kowalska" : "Marta Wiśniewska",
+          ...previewProfile,
+          guestAccess: false,
         }),
       );
     }
+    document.querySelector("#mobile-nav").classList.toggle("hidden", state.role === "guest");
+    document.body.classList.toggle("guest-mode", state.role === "guest");
     saveState();
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
