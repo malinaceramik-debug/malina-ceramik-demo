@@ -1731,6 +1731,28 @@ h2 {
   display: block;
 }
 
+.catalog-community-preview {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  margin: -7px 0 18px auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.catalog-community-preview span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #72546a;
+  background: #eee7f3;
+  font-weight: 800;
+}
+
+.catalog-community-preview strong {
+  font-size: 10px;
+}
+
 .catalog-identity span {
   margin-top: 4px;
   color: var(--muted);
@@ -1808,11 +1830,15 @@ h2 {
   grid-template-columns: 82px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
+  padding: 7px 9px;
+  border: 1px solid var(--brand-border, transparent);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--brand-bg, transparent) 56%, white);
 }
 
 .catalog-brand-models h4 {
   margin: 0;
-  color: var(--green-dark);
+  color: var(--brand-text, var(--green-dark));
   font-size: 10px;
   font-weight: 850;
   line-height: 1.25;
@@ -1841,6 +1867,16 @@ h2 {
     transform 150ms ease;
 }
 
+.catalog-chip.brand-themed {
+  border-color: var(--brand-border);
+  color: var(--brand-text);
+  background: var(--brand-bg);
+}
+
+.catalog-chip.brand-themed:hover {
+  border-color: var(--brand-text);
+}
+
 .catalog-chip:hover {
   transform: translateY(-1px);
   border-color: #9f9488;
@@ -1851,6 +1887,13 @@ h2 {
   color: white;
   background: var(--green);
   box-shadow: 0 5px 15px rgba(49, 95, 75, 0.18);
+}
+
+.catalog-chip.brand-themed.active {
+  border-color: var(--brand-text);
+  color: var(--brand-text);
+  background: color-mix(in srgb, var(--brand-bg) 62%, var(--brand-border));
+  box-shadow: 0 5px 15px color-mix(in srgb, var(--brand-border) 28%, transparent);
 }
 
 .catalog-clear {
@@ -1946,14 +1989,10 @@ h2 {
   font-weight: 850;
 }
 
-.catalog-result-tags .glaze-tag {
-  color: #7b3e31;
-  background: #f8dfd5;
-}
-
-.catalog-result-tags .clay-tag {
-  color: #5f4b2f;
-  background: #efe4ce;
+.catalog-result-tags .brand-themed {
+  border: 1px solid var(--brand-border);
+  color: var(--brand-text);
+  background: var(--brand-bg);
 }
 
 .catalog-result-body > p {

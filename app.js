@@ -453,7 +453,7 @@ function navItems() {
 }
 
 function utilityNavItem() {
-  return { id: "glazes", label: "Szkliwa pracowni", icon: "palette" };
+  return { id: "glazes", label: "Biblioteka szkliw", icon: "palette" };
 }
 
 function statusLabel(status) {
@@ -662,9 +662,9 @@ function studentHome() {
     <article class="catalog-teaser">
       <div>
         <p class="eyebrow">Wspólna biblioteka Malina Ceramik</p>
-        <h2>Szkliwa dostępne w pracowni</h2>
+        <h2>Biblioteka szkliw i efektów</h2>
       </div>
-      <button class="primary-button" data-view="glazes" type="button">Zobacz szkliwa pracowni</button>
+      <button class="primary-button" data-view="glazes" type="button">Zobacz bibliotekę szkliw</button>
     </article>
   `;
 }
@@ -1011,9 +1011,9 @@ function instructorJournalView() {
     <article class="catalog-teaser journal-catalog-teaser">
       <div>
         <p class="eyebrow">Biblioteka wspólna</p>
-        <h2>Sprawdź szkliwa dostępne w pracowni</h2>
+        <h2>Sprawdź efekty innych osób</h2>
       </div>
-      <button class="secondary-button" data-view="glazes" type="button">Otwórz szkliwa pracowni</button>
+      <button class="secondary-button" data-view="glazes" type="button">Otwórz bibliotekę szkliw</button>
     </article>
   `;
 }
@@ -1038,15 +1038,19 @@ function glazeCatalogView() {
   return `
     <div class="page-head catalog-page-head">
       <div>
-        <p class="eyebrow">Wspólna biblioteka Malina Ceramik</p>
-        <h1>Szkliwa pracowni</h1>
+        <p class="eyebrow">Społeczność Malina Ceramik</p>
+        <h1>Biblioteka szkliw</h1>
       </div>
     </div>
     <div class="catalog-identity">
       <div class="catalog-identity-icon">${icon("palette")}</div>
       <div>
-        <strong>To katalog wspólny dla całej pracowni</strong>
+        <strong>Efekty szkliw pracowni i kursantów</strong>
       </div>
+    </div>
+    <div class="catalog-community-preview">
+      <span>W przyszłości</span>
+      <strong>Oceny i kombinacja miesiąca</strong>
     </div>
     <div class="catalog-notice">
       <strong>Każdy wypał może wyglądać trochę inaczej.</strong>
@@ -1100,7 +1104,7 @@ function glazeCatalogView() {
     <section class="catalog-results">
       <div class="catalog-results-head">
         <div>
-          <p class="eyebrow">Realizacje z pracowni</p>
+          <p class="eyebrow">Efekty społeczności</p>
           <h2>${selectionCount ? "Wyroby pasujące do wyboru" : "Wszystkie skatalogowane wyroby"}</h2>
           ${selectionSummary ? `<p>${selectionSummary}</p>` : ""}
         </div>
@@ -1130,9 +1134,9 @@ function catalogBrandOptionGroups(brands, materials, selected, type) {
               label: `${material.code} · ${material.name}`,
             }));
           return `
-            <div class="catalog-brand-models" data-catalog-kind="${type}" data-catalog-brand-group="${escapeHtml(brand)}">
+            <div class="catalog-brand-models brand-themed" style="${brandThemeStyle(brand, type)}" data-catalog-kind="${type}" data-catalog-brand-group="${escapeHtml(brand)}">
               <h4>${escapeHtml(brand)}</h4>
-              ${catalogChipList(options, selected, type)}
+              ${catalogChipList(options, selected, type, brand)}
             </div>
           `;
         })
@@ -1153,17 +1157,33 @@ function catalogFilterGroup(title, options, selected, type) {
   `;
 }
 
-function catalogChipList(options, selected, type) {
+function catalogChipList(options, selected, type, fixedBrand = null) {
   return `
     <div class="catalog-chip-list">
       ${options
-        .map(
-          (option) =>
-            `<button class="catalog-chip ${selected.includes(option.value) ? "active" : ""}" data-catalog-filter="${type}" data-catalog-value="${escapeHtml(option.value)}" type="button">${escapeHtml(option.label)}</button>`,
-        )
+        .map((option) => {
+          const brand =
+            fixedBrand ||
+            (type === "glaze-brand" || type === "clay-brand" ? option.value : null);
+          return `<button class="catalog-chip ${brand ? "brand-themed" : ""} ${selected.includes(option.value) ? "active" : ""}" ${brand ? `style="${brandThemeStyle(brand, type)}"` : ""} data-catalog-filter="${type}" data-catalog-value="${escapeHtml(option.value)}" type="button">${escapeHtml(option.label)}</button>`;
+        })
         .join("")}
     </div>
   `;
+}
+
+function brandThemeStyle(brand, type) {
+  const themes = {
+    Amaco: ["#f8e5dc", "#d99a7d", "#754535"],
+    Botz: ["#e2edf3", "#91b2c4", "#34576b"],
+    "G&S": ["#e5efe4", "#9fba9b", "#405d3f"],
+    Silbeco: ["#eee7f3", "#b9a4c8", "#5f4b6e"],
+  };
+  const fallback = type.startsWith("clay")
+    ? ["#f1eadb", "#c8b58f", "#655638"]
+    : ["#e8eee8", "#aabbaa", "#405740"];
+  const [background, border, color] = themes[brand] || fallback;
+  return `--brand-bg:${background};--brand-border:${border};--brand-text:${color}`;
 }
 
 function glazeByName(name) {
@@ -1251,21 +1271,29 @@ function catalogResultCard(item) {
   const sharing = normalizeSharing(item.sharing);
   const glazeLabels = recipe.glazes
     .map(glazeByName)
-    .filter(Boolean)
-    .map((glaze) => `${glaze.brand} ${glaze.code}`);
+    .filter(Boolean);
   const clayLabels = recipe.clay
     .map(clayByName)
-    .filter(Boolean)
-    .map((clay) => `${clay.brand} ${clay.code}`);
+    .filter(Boolean);
   return `
     <article class="catalog-result-card">
-      <img src="${sharedCatalogImage(item)}" alt="Skatalogowany wyrób z pracowni" />
+      <img src="${sharedCatalogImage(item)}" alt="Udostępniony skatalogowany wyrób" />
       <div class="catalog-result-body">
-        <span class="catalog-result-source">Realizacja z pracowni</span>
+        <span class="catalog-result-source">Udostępniona realizacja</span>
         <h3>Wyrób z ${formatFullDate(item.date)}</h3>
         <div class="catalog-result-tags">
-          ${glazeLabels.map((label) => `<span class="glaze-tag">${label}</span>`).join("")}
-          ${clayLabels.map((label) => `<span class="clay-tag">${label}</span>`).join("")}
+          ${glazeLabels
+            .map(
+              (glaze) =>
+                `<span class="brand-themed" style="${brandThemeStyle(glaze.brand, "glaze")}">${glaze.brand} ${glaze.code}</span>`,
+            )
+            .join("")}
+          ${clayLabels
+            .map(
+              (clay) =>
+                `<span class="brand-themed" style="${brandThemeStyle(clay.brand, "clay")}">${clay.brand} ${clay.code}</span>`,
+            )
+            .join("")}
         </div>
         <p>${sharing.note && recipe.note ? escapeHtml(recipe.note) : "Udostępniony przykład efektu po wypale."}</p>
       </div>
