@@ -1,3 +1,5 @@
+import { liveBackend } from "./backend.js";
+
 const STORAGE_KEY = "malina-ceramik-pwa-demo-v2";
 const SESSION_KEY = "malina-ceramik-demo-session";
 const demoAccounts = {
@@ -298,6 +300,7 @@ const initialState = {
   selected: [],
   items: initialItems,
   emailEvents: [],
+  notifications: [],
   customMaterialOptions: {
     clay: [],
     glazes: [],
@@ -344,6 +347,187 @@ let combinationShareMode = false;
 let combinationShareSelection = [];
 let guestLoginActive = false;
 let toastTimer;
+let liveMode = false;
+let liveUser = null;
+let liveStateUnsubscribe = null;
+let liveSaveTimer = null;
+let lastRemoteStateHash = "";
+let serviceWorkerRegistration = null;
+let liveStateLoaded = false;
+
+const sharedStateKeys = [
+  "items",
+  "payments",
+  "emailEvents",
+  "notifications",
+  "customMaterialOptions",
+];
+
+function currentInstructorId() {
+  return liveMode && liveUser ? liveUser.uid : "marta";
+}
+
+function currentInstructorName() {
+  return (
+    liveUser?.displayName ||
+    liveUser?.email?.split("@")[0] ||
+    "Instruktor Malina"
+  );
+}
+
+function liveEmptyState() {
+  return {
+    ...structuredClone(initialState),
+    role: "instructor",
+    view: "gallery",
+    items: [],
+    payments: [],
+    emailEvents: [],
+    notifications: [],
+  };
+}
+
+function sharedStatePayload() {
+  return Object.fromEntries(
+    sharedStateKeys.map((key) => [key, structuredClone(state[key] || [])]),
+  );
+}
+
+function sharedStateHash(payload = sharedStatePayload()) {
+  return JSON.stringify(payload);
+}
+
+function applyRemoteState(remoteState) {
+  const knownNotificationIds = new Set(
+    (state.notifications || []).map((notification) => notification.id),
+  );
+  const newNotifications = (remoteState.notifications || []).filter(
+    (notification) =>
+      !knownNotificationIds.has(notification.id) &&
+      notification.actorUid !== liveUser?.uid,
+  );
+  sharedStateKeys.forEach((key) => {
+    if (remoteState?.[key] !== undefined) {
+      state[key] = structuredClone(remoteState[key]);
+    }
+  });
+  lastRemoteStateHash = sharedStateHash();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  render();
+  if (
+    liveStateLoaded &&
+    typeof Notification !== "undefined" &&
+    Notification.permission === "granted"
+  ) {
+    newNotifications.forEach((notification) => {
+      const systemNotification = new Notification(notification.title, {
+        body: notification.body,
+        icon: "assets/malina-app-icon.png",
+      });
+      systemNotification.onclick = () => window.focus();
+    });
+  }
+  liveStateLoaded = true;
+}
+
+function scheduleRemoteSave() {
+  if (!liveMode || !liveUser) return;
+  const payload = sharedStatePayload();
+  const nextHash = sharedStateHash(payload);
+  if (nextHash === lastRemoteStateHash) return;
+  clearTimeout(liveSaveTimer);
+  liveSaveTimer = setTimeout(async () => {
+    try {
+      await liveBackend.saveStudioState(payload);
+      lastRemoteStateHash = nextHash;
+      setCloudStatus("Zapisano w chmurze", "ready");
+    } catch (error) {
+      setCloudStatus("Brak synchronizacji", "error");
+      showToast(error.message || "Nie udało się zapisać zmian w chmurze.");
+    }
+  }, 250);
+}
+
+function setCloudStatus(label, status = "ready") {
+  const badge = document.querySelector("#cloud-status");
+  if (!badge) return;
+  badge.textContent = label;
+  badge.dataset.status = status;
+}
+
+function configureLiveInterface() {
+  document.body.classList.add("live-pilot");
+  document.querySelector("#guest-login-toggle").classList.add("hidden");
+  document.querySelector("#demo-login").classList.add("hidden");
+  document.querySelector(".role-switch").classList.add("hidden");
+  document.querySelector("#reset-demo").classList.add("hidden");
+  document.querySelector("#login-title").textContent = "Panel instruktora";
+  document.querySelector("#environment-title").textContent = "Pilot instruktorów";
+  setCloudStatus("Łączenie z chmurą...", "syncing");
+}
+
+async function connectLiveUser(user) {
+  liveUser = user;
+  const session = {
+    email: user.email || "",
+    role: "instructor",
+    name: currentInstructorName(),
+    uid: user.uid,
+    liveAccess: true,
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  state = liveEmptyState();
+  liveStateLoaded = false;
+  showApplication(session);
+  setCloudStatus("Pobieranie danych...", "syncing");
+  if (liveStateUnsubscribe) liveStateUnsubscribe();
+  liveStateUnsubscribe = await liveBackend.subscribeToStudioState(
+    async (remoteState) => {
+      if (!remoteState) {
+        const emptyState = sharedStatePayload();
+        await liveBackend.saveStudioState(emptyState);
+        lastRemoteStateHash = sharedStateHash(emptyState);
+        setCloudStatus("Połączono", "ready");
+        return;
+      }
+      applyRemoteState(remoteState);
+      setCloudStatus("Połączono", "ready");
+    },
+    (error) => {
+      setCloudStatus("Brak synchronizacji", "error");
+      showToast(error.message || "Nie udało się pobrać danych pracowni.");
+    },
+  );
+}
+
+async function initializeLivePilot() {
+  if (new URLSearchParams(location.search).has("demo")) return false;
+  if (!liveBackend.isConfigured()) return false;
+  liveMode = true;
+  configureLiveInterface();
+  await liveBackend.observeAuth(
+    async (user) => {
+      if (user) {
+        await connectLiveUser(user);
+        return;
+      }
+      liveUser = null;
+      if (liveStateUnsubscribe) {
+        liveStateUnsubscribe();
+        liveStateUnsubscribe = null;
+      }
+      localStorage.removeItem(SESSION_KEY);
+      showLogin();
+    },
+    () => {
+      showLogin();
+      const error = document.querySelector("#login-error");
+      error.textContent = "Usługa logowania nie została jeszcze aktywowana.";
+      error.classList.remove("hidden");
+    },
+  );
+  return true;
+}
 
 function currentSession() {
   try {
@@ -386,8 +570,25 @@ function showApplication(session) {
   render();
 }
 
-function login(email, password) {
+async function login(email, password) {
   const normalizedEmail = email.trim().toLowerCase();
+  if (liveMode) {
+    const submit = document.querySelector("#login-submit");
+    try {
+      submit.disabled = true;
+      submit.textContent = "Logowanie...";
+      await liveBackend.signIn(normalizedEmail, password);
+      document.querySelector("#login-error").classList.add("hidden");
+    } catch {
+      const error = document.querySelector("#login-error");
+      error.textContent = "Nieprawidłowy e-mail lub hasło instruktora.";
+      error.classList.remove("hidden");
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Zaloguj się";
+    }
+    return;
+  }
   const account = demoAccounts[normalizedEmail];
   if (!account || account.password !== password) {
     const error = document.querySelector("#login-error");
@@ -445,7 +646,11 @@ function setGuestLogin(active) {
   if (active) document.querySelector("#login-email").focus();
 }
 
-function logout() {
+async function logout() {
+  if (liveMode) {
+    await liveBackend.signOut();
+    return;
+  }
   localStorage.removeItem(SESSION_KEY);
   document.querySelector("#profile-menu").classList.add("hidden");
   document.querySelector("#login-form").reset();
@@ -496,6 +701,7 @@ function loadState() {
       studentItemsTab: saved.studentItemsTab === "payments" ? "payments" : "studio",
       items,
       emailEvents: Array.isArray(saved.emailEvents) ? saved.emailEvents : [],
+      notifications: Array.isArray(saved.notifications) ? saved.notifications : [],
       payments,
     };
   } catch {
@@ -505,6 +711,7 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  scheduleRemoteSave();
 }
 
 function normalizeRecipe(recipe = {}) {
@@ -605,7 +812,7 @@ function isOwnItem(item) {
   const session = currentSession();
   return (
     (state.role === "student" && item.ownerId === "anna") ||
-    (state.role === "instructor" && item.ownerId === "marta") ||
+    (state.role === "instructor" && item.ownerId === currentInstructorId()) ||
     (state.role === "guest" && item.ownerId === session?.ownerId)
   );
 }
@@ -711,33 +918,41 @@ function renderNav() {
   document.querySelector("#desktop-nav").innerHTML = markup;
   document.querySelector("#desktop-utility-nav").innerHTML = utilityMarkup;
   document.querySelector("#mobile-nav").innerHTML = makeMarkup(mobileItems);
+  document.querySelector(".mobile-brand").dataset.view =
+    state.role === "instructor" ? "gallery" : state.role === "student" ? "home" : "guest-items";
 }
 
 function renderProfile() {
   const isStudent = state.role === "student";
   const isGuest = state.role === "guest";
   const session = currentSession();
-  document.querySelector("#avatar").textContent = isGuest ? "G" : isStudent ? "AK" : "MW";
-  document.querySelector("#profile-name").textContent = isGuest
-    ? "Gość"
-    : isStudent
-      ? "Anna Kowalska"
-      : "Marta Wiśniewska";
+  const profileName = liveMode
+    ? session?.name || currentInstructorName()
+    : isGuest
+      ? "Gość"
+      : isStudent
+        ? "Anna Kowalska"
+        : "Marta Wiśniewska";
+  const initials = profileName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+  document.querySelector("#avatar").textContent = initials || (isGuest ? "G" : "M");
+  document.querySelector("#profile-name").textContent = profileName;
   document.querySelector("#profile-role").textContent = isGuest
     ? "Wypał gościnny"
     : isStudent
       ? "Kursantka"
       : "Instruktorka";
-  document.querySelector("#profile-menu-name").textContent = isGuest
-    ? "Gość"
-    : isStudent
-      ? "Anna Kowalska"
-      : "Marta Wiśniewska";
+  document.querySelector("#profile-menu-name").textContent = profileName;
   document.querySelector("#profile-menu-email").textContent =
     session?.email || (isStudent ? "anna@malinaceramik.pl" : "marta@malinaceramik.pl");
   document
     .querySelector(".role-switch")
-    .classList.toggle("hidden", isRestrictedGuestSession(session));
+    .classList.toggle("hidden", liveMode || isRestrictedGuestSession(session));
   document.querySelectorAll("[data-role]").forEach((button) => {
     button.classList.toggle("active", button.dataset.role === state.role);
   });
@@ -997,7 +1212,7 @@ function studentGallerySections(items) {
 }
 
 function studentCombinations() {
-  const ownerId = state.role === "student" ? "anna" : "marta";
+  const ownerId = state.role === "student" ? "anna" : currentInstructorId();
   const allItems = state.items
     .filter((item) => item.ownerId === ownerId)
     .sort(
@@ -1196,7 +1411,7 @@ function journalStageLabel(stage) {
 
 function instructorCeramicsView() {
   const items = state.items
-    .filter((item) => item.ownerId === "marta")
+    .filter((item) => item.ownerId === currentInstructorId())
     .filter(
       (item) =>
         state.instructorPersonalFilter === "all" ||
@@ -1206,7 +1421,7 @@ function instructorCeramicsView() {
       const priority = { ready: 0, waiting: 1, collected: 2 };
       return priority[a.status] - priority[b.status] || b.date.localeCompare(a.date);
     });
-  const allItems = state.items.filter((item) => item.ownerId === "marta");
+  const allItems = state.items.filter((item) => item.ownerId === currentInstructorId());
   const filters = [
     ["all", "Wszystkie"],
     ["ready", "Do odbioru"],
@@ -1560,7 +1775,48 @@ function studentHistory() {
 }
 
 function notificationsView() {
-  const ownerId = state.role === "student" ? "anna" : "marta";
+  if (liveMode) {
+    const notifications = (state.notifications || [])
+      .slice()
+      .sort((a, b) => b.createdAt - a.createdAt);
+    return `
+      <div class="page-head notification-page-head">
+        <div>
+          <p class="eyebrow">Wiadomości z pracowni</p>
+          <h1>Powiadomienia</h1>
+        </div>
+        <button class="secondary-button" id="enable-push" type="button">
+          ${typeof Notification !== "undefined" && Notification.permission === "granted" ? "Powiadomienia włączone" : "Włącz powiadomienia"}
+        </button>
+      </div>
+      <section class="panel">
+        <div class="history-list">
+          ${
+            notifications.length
+              ? notifications
+                  .map(
+                    (notification) => `
+                      <div class="history-row">
+                        <div class="history-icon">${icon("bell")}</div>
+                        <div>
+                          <strong>${escapeHtml(notification.title)}</strong>
+                          <small>${escapeHtml(notification.body)} · ${new Intl.DateTimeFormat("pl-PL", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }).format(new Date(notification.createdAt))}</small>
+                        </div>
+                        <span class="status-pill ready">${notification.actorName === currentInstructorName() ? "Twoje" : "Nowe"}</span>
+                      </div>`,
+                  )
+                  .join("")
+              : emptyState("Spokojnie w pracowni", "Nowe zdarzenia pojawią się tutaj.")
+          }
+        </div>
+      </section>`;
+  }
+  const ownerId = state.role === "student" ? "anna" : currentInstructorId();
   const ready = state.items.filter(
     (item) => item.ownerId === ownerId && !item.personalJournal && item.status === "ready",
   );
@@ -1880,7 +2136,7 @@ function attachViewListeners() {
   });
 
   document.querySelector("#start-combination-sharing")?.addEventListener("click", () => {
-    const ownerId = state.role === "student" ? "anna" : "marta";
+    const ownerId = state.role === "student" ? "anna" : currentInstructorId();
     combinationShareMode = true;
     combinationShareSelection = state.items
       .filter((item) => item.ownerId === ownerId && isCombinationShared(item))
@@ -1896,7 +2152,7 @@ function attachViewListeners() {
   });
 
   document.querySelector("#save-combination-sharing")?.addEventListener("click", () => {
-    const ownerId = state.role === "student" ? "anna" : "marta";
+    const ownerId = state.role === "student" ? "anna" : currentInstructorId();
     state.items = state.items.map((item) => {
       if (item.ownerId !== ownerId || !isCombinationCategorized(item)) return item;
       const sharing = normalizeSharing(item.sharing);
@@ -1978,6 +2234,7 @@ function attachViewListeners() {
     input.addEventListener("input", updatePrice);
   });
   document.querySelector("#save-settlement")?.addEventListener("click", saveSettlement);
+  document.querySelector("#enable-push")?.addEventListener("click", enablePushNotifications);
 
   document.querySelectorAll(".client-filter").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1987,6 +2244,48 @@ function attachViewListeners() {
       saveState();
       render();
     });
+  });
+}
+
+async function enablePushNotifications() {
+  const button = document.querySelector("#enable-push");
+  try {
+    button.disabled = true;
+    button.textContent = "Włączanie...";
+    if (!serviceWorkerRegistration) {
+      serviceWorkerRegistration = await navigator.serviceWorker.ready;
+    }
+    await liveBackend.enablePushNotifications(serviceWorkerRegistration);
+    showToast("Powiadomienia systemowe zostały włączone.");
+    render();
+  } catch (error) {
+    showToast(error.message || "Nie udało się włączyć powiadomień.");
+    button.disabled = false;
+    button.textContent = "Włącz powiadomienia";
+  }
+}
+
+function publishStudioEvent({ type, title, body, itemIds = [] }) {
+  if (!liveMode) return;
+  const notification = {
+    id: `notification-${Date.now()}-${crypto.randomUUID()}`,
+    type,
+    title,
+    body,
+    itemIds,
+    actorUid: liveUser?.uid || "",
+    actorName: currentInstructorName(),
+    createdAt: Date.now(),
+  };
+  state.notifications = [notification, ...(state.notifications || [])].slice(0, 100);
+  liveBackend.publishNotification({
+    type,
+    title,
+    body,
+    itemIds,
+    url: location.href,
+  }).catch(() => {
+    showToast("Zmiana została zapisana, ale push nie został wysłany.");
   });
 }
 
@@ -2370,17 +2669,25 @@ function finalEffectSection(item, canAddFinal) {
   `;
 }
 
-function addFinalImages(itemId, images) {
+async function addFinalImages(itemId, images) {
+  const storedImages = [];
+  for (const image of images) {
+    storedImages.push(
+      image.file && liveMode
+        ? await liveBackend.uploadImage(image.file, "final")
+        : image.image || image,
+    );
+  }
   state.items = state.items.map((item) =>
     item.id === itemId
       ? {
           ...item,
           finalImages: [
             ...normalizeFinalImages(item.finalImages),
-            ...images.map((image) => ({
+            ...storedImages.map((image) => ({
               id: `final-${Date.now()}-${Math.random().toString(16).slice(2)}`,
               image,
-              date: "2026-06-11",
+              date: new Date().toISOString().slice(0, 10),
             })),
           ],
         }
@@ -2838,6 +3145,7 @@ function openJournalFlow(mode = "instructor") {
     mode,
     title: "",
     image: null,
+    file: null,
     firing: "glaze",
     stage: "making",
   };
@@ -2913,6 +3221,7 @@ function renderJournalFlow() {
     button.addEventListener("click", () => {
       journalDraft.title = modal.querySelector("#journal-title").value;
       journalDraft.image = button.dataset.journalDemoImage;
+      journalDraft.file = null;
       renderJournalFlow();
     });
   });
@@ -2933,28 +3242,50 @@ function renderJournalFlow() {
   modal.querySelector("#save-journal-item")?.addEventListener("click", saveJournalItem);
 }
 
-function saveJournalItem() {
+async function saveJournalItem() {
   const title = document.querySelector("#journal-title").value.trim();
   if (!journalDraft.image) return;
+  const button = document.querySelector("#save-journal-item");
+  try {
+    button.disabled = true;
+    button.textContent = liveMode ? "Wysyłanie zdjęcia..." : button.textContent;
+    if (journalDraft.file && liveMode) {
+      journalDraft.image = await liveBackend.uploadImage(journalDraft.file, "journal");
+    }
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Dodaj do dziennika";
+    showToast(error.message || "Nie udało się wysłać zdjęcia.");
+    return;
+  }
   const isStudentEntry = journalDraft.mode === "student";
-  const id = Math.max(100, ...state.items.map((item) => item.id)) + 1;
+  const id = liveMode
+    ? Date.now()
+    : Math.max(100, ...state.items.map((item) => item.id)) + 1;
   state.items.push({
     id,
     code: `MC-${String(id).padStart(4, "0")}`,
     name: title || `Próba z ${formatFullDate("2026-06-11")}`,
-    owner: isStudentEntry ? "Anna Kowalska" : "Marta Wiśniewska",
-    ownerId: isStudentEntry ? "anna" : "marta",
+    owner: isStudentEntry ? "Anna Kowalska" : currentInstructorName(),
+    ownerId: isStudentEntry ? "anna" : currentInstructorId(),
     image: journalDraft.image,
     status: journalDraft.stage === "finished" ? "collected" : "waiting",
     firing: journalDraft.firing,
     group: isStudentEntry ? "Moje kombinacje" : "Dziennik instruktora",
-    date: "2026-06-11",
-    firedAt: journalDraft.stage === "finished" ? "2026-06-11" : undefined,
+    date: new Date().toISOString().slice(0, 10),
+    firedAt:
+      journalDraft.stage === "finished" ? new Date().toISOString().slice(0, 10) : undefined,
     personalJournal: true,
     journalStage: journalDraft.stage,
     finalImages: [],
     sharing: normalizeSharing(),
     recipe: normalizeRecipe(),
+  });
+  publishStudioEvent({
+    type: "journal-added",
+    title: "Nowy wyrób instruktora",
+    body: `${currentInstructorName()} dodał(a) wyrób do swojej ceramiki.`,
+    itemIds: [id],
   });
   saveState();
   closeModal();
@@ -3124,12 +3455,48 @@ function addFlowBody() {
   `;
 }
 
-function addPhoto(image) {
+function addPhoto(image, file = null) {
   addFlow.photos.push({
     id: `photo-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     image,
+    file,
     firing: "bisque",
   });
+}
+
+async function prepareImage(file) {
+  if (!liveMode) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ image: reader.result, file: null });
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  const bitmap = await createImageBitmap(file);
+  const maxSide = 1800;
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (result) => (result ? resolve(result) : reject(new Error("Nie udało się przygotować zdjęcia."))),
+      "image/jpeg",
+      0.84,
+    );
+  });
+  const preparedFile = new File(
+    [blob],
+    `${file.name.replace(/\.[^.]+$/, "") || "zdjecie"}.jpg`,
+    { type: "image/jpeg", lastModified: Date.now() },
+  );
+  return {
+    image: URL.createObjectURL(preparedFile),
+    file: preparedFile,
+  };
 }
 
 function pluralPhotos(count) {
@@ -3162,26 +3529,52 @@ function photoGrid(mode) {
     </div>`;
 }
 
-function confirmNewItems() {
+async function confirmNewItems() {
+  const confirmButton = document.querySelector("#confirm-add");
+  if (confirmButton) {
+    confirmButton.disabled = true;
+    confirmButton.textContent = liveMode ? "Wysyłanie zdjęć..." : "Dodawanie...";
+  }
+  const storedPhotos = [];
+  try {
+    for (const photo of addFlow.photos) {
+      storedPhotos.push({
+        ...photo,
+        image:
+          photo.file && liveMode
+            ? await liveBackend.uploadImage(photo.file, "items")
+            : photo.image,
+      });
+    }
+  } catch (error) {
+    if (confirmButton) {
+      confirmButton.disabled = false;
+      confirmButton.textContent = "Dodaj wyroby do pracowni";
+    }
+    showToast(error.message || "Nie udało się wysłać zdjęć.");
+    return;
+  }
   const session = currentSession();
   const ownerId =
     state.role === "student"
       ? "anna"
       : state.role === "instructor"
-        ? "marta"
+        ? currentInstructorId()
         : session.ownerId;
   const owner =
     state.role === "student"
       ? "Anna Kowalska"
       : state.role === "instructor"
-        ? "Marta Wiśniewska"
+        ? currentInstructorName()
         : session.email;
-  let nextId =
-    state.role === "student"
+  let nextId = liveMode
+    ? Date.now()
+    : state.role === "student"
       ? Math.max(0, ...state.items.filter((item) => item.id < 100).map((item) => item.id)) + 1
       : Math.max(100, ...state.items.map((item) => item.id)) + 1;
-  const newItems = addFlow.photos.map((photo) => {
-    const id = nextId++;
+  const today = new Date().toISOString().slice(0, 10);
+  const newItems = storedPhotos.map((photo, index) => {
+    const id = liveMode ? nextId + index : nextId++;
     return {
       id,
       code: `MC-${String(id).padStart(4, "0")}`,
@@ -3197,7 +3590,7 @@ function confirmNewItems() {
           : state.role === "instructor"
             ? "Dostawa instruktora 11.06"
             : "Wypał gościnny 11.06",
-      date: state.role === "student" ? "2026-06-09" : "2026-06-11",
+      date: liveMode ? today : state.role === "student" ? "2026-06-09" : "2026-06-11",
       finalImages: [],
       sharing: normalizeSharing(),
       recipe: normalizeRecipe(),
@@ -3213,6 +3606,12 @@ function confirmNewItems() {
       createdAt: Date.now(),
     });
   }
+  publishStudioEvent({
+    type: "items-added",
+    title: "Nowa ceramika w pracowni",
+    body: `${owner} dodał(a) ${newItems.length} ${pluralItems(newItems.length)} do wypału.`,
+    itemIds: newItems.map((item) => item.id),
+  });
   saveState();
   closeModal();
   if (state.role === "student") {
@@ -3260,9 +3659,10 @@ function openFiredConfirmation() {
 function confirmFired() {
   const count = state.selected.length;
   const firedItems = state.items.filter((item) => state.selected.includes(item.id));
+  const today = new Date().toISOString().slice(0, 10);
   state.items = state.items.map((item) =>
     state.selected.includes(item.id)
-      ? { ...item, status: "ready", firedAt: "2026-06-09" }
+      ? { ...item, status: "ready", firedAt: liveMode ? today : "2026-06-09" }
       : item,
   );
   const guestEmails = [...new Set(firedItems.map((item) => item.ownerEmail).filter(Boolean))];
@@ -3274,6 +3674,12 @@ function confirmFired() {
       itemIds: firedItems.filter((item) => item.ownerEmail === email).map((item) => item.id),
       createdAt: Date.now(),
     });
+  });
+  publishStudioEvent({
+    type: "items-fired",
+    title: "Ceramika po wypale",
+    body: `${currentInstructorName()} oznaczył(a) ${count} ${pluralItems(count)} jako gotowe.`,
+    itemIds: firedItems.map((item) => item.id),
   });
   state.selected = [];
   saveState();
@@ -3310,6 +3716,11 @@ function saveSettlement() {
     bisque,
     glaze,
     total,
+  });
+  publishStudioEvent({
+    type: "settlement-added",
+    title: "Nowe rozliczenie",
+    body: `${currentInstructorName()} zapisał(a) rozliczenie ${formatMoney(total)} dla ${owner}.`,
   });
   saveState();
   render();
@@ -3459,64 +3870,78 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-document.querySelector("#photo-input").addEventListener("change", (event) => {
+document.querySelector("#photo-input").addEventListener("change", async (event) => {
   const files = [...event.target.files];
   if (!files.length) return;
-  let loaded = 0;
-  files.forEach((file) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      addPhoto(reader.result);
-      loaded += 1;
-      if (loaded === files.length) renderAddFlow();
-    };
-    reader.readAsDataURL(file);
-  });
+  try {
+    const prepared = await Promise.all(files.map(prepareImage));
+    prepared.forEach(({ image, file }) => addPhoto(image, file));
+    renderAddFlow();
+  } catch {
+    showToast("Nie udało się odczytać jednego ze zdjęć.");
+  }
   event.target.value = "";
 });
 
-document.querySelector("#final-photo-input").addEventListener("change", (event) => {
+document.querySelector("#final-photo-input").addEventListener("change", async (event) => {
   const files = [...event.target.files];
   const itemId = finalPhotoTargetId;
   if (!files.length || !itemId) return;
-  const images = [];
-  files.forEach((file) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      images.push(reader.result);
-      if (images.length === files.length) {
-        addFinalImages(itemId, images);
-        finalPhotoTargetId = null;
-      }
-    };
-    reader.readAsDataURL(file);
-  });
+  try {
+    const images = await Promise.all(files.map(prepareImage));
+    await addFinalImages(itemId, images);
+    finalPhotoTargetId = null;
+  } catch (error) {
+    showToast(error.message || "Nie udało się wysłać zdjęć.");
+  }
   event.target.value = "";
 });
 
-document.querySelector("#journal-photo-input").addEventListener("change", (event) => {
+document.querySelector("#journal-photo-input").addEventListener("change", async (event) => {
   const [file] = [...event.target.files];
   if (!file || !journalDraft) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    journalDraft.image = reader.result;
+  try {
+    const prepared = await prepareImage(file);
+    journalDraft.image = prepared.image;
+    journalDraft.file = prepared.file;
     renderJournalFlow();
-  };
-  reader.readAsDataURL(file);
+  } catch {
+    showToast("Nie udało się przygotować zdjęcia.");
+  }
   event.target.value = "";
 });
 
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+async function bootstrapApplication() {
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker
+      .register("sw.js")
+      .then((registration) => {
+        serviceWorkerRegistration = registration;
+      })
+      .catch(() => {
+        serviceWorkerRegistration = null;
+      });
+  }
+
+  try {
+    if (await initializeLivePilot()) return;
+  } catch (error) {
+    console.error("Nie udało się uruchomić trybu pilotażowego.", error);
+    document.querySelector("#login-error").textContent =
+      "Nie udało się połączyć z usługą logowania. Spróbuj ponownie za chwilę.";
+    document.querySelector("#login-error").classList.remove("hidden");
+  }
+
+  const savedSession = currentSession();
+  if (
+    savedSession &&
+    (demoAccounts[savedSession.email] ||
+      (savedSession.role === "guest" && savedSession.email && savedSession.ownerId))
+  ) {
+    showApplication(savedSession);
+  } else {
+    showLogin();
+  }
 }
 
-const savedSession = currentSession();
-if (
-  savedSession &&
-  (demoAccounts[savedSession.email] ||
-    (savedSession.role === "guest" && savedSession.email && savedSession.ownerId))
-) {
-  showApplication(savedSession);
-} else {
-  showLogin();
-}
+bootstrapApplication();

@@ -1,5 +1,10 @@
 outputs/
 work/
+node_modules/
+functions/node_modules/
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
 
 # Duze pliki zrodlowe. Aplikacja korzysta z lekkich wersji WebP.
 assets/kubek.png

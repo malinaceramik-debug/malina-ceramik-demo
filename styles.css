@@ -496,6 +496,23 @@ a {
   font-size: 10px;
 }
 
+.live-pilot .demo-note {
+  border-color: #cfe0d7;
+  background: #f2f8f4;
+}
+
+#cloud-status[data-status="syncing"] {
+  color: #8a6a2d;
+}
+
+#cloud-status[data-status="error"] {
+  color: #a34d42;
+}
+
+.live-pilot .notification-page-head {
+  align-items: flex-end;
+}
+
 .text-button {
   width: 100%;
   margin-top: 10px;

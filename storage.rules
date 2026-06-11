@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function instructor() {
+      return request.auth != null
+        && request.auth.token.email in [
+          "malinaceramik@gmail.com"
+        ];
+    }
+
+    match /studios/{studioId}/users/{userId}/{allPaths=**} {
+      allow read: if instructor();
+      allow write: if instructor()
+        && request.auth.uid == userId
+        && request.resource.size < 12 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

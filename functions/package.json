@@ -1,0 +1,13 @@
+{
+  "name": "malina-ceramik-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "@google-cloud/firestore": "8.6.0",
+    "firebase-functions": "7.2.5",
+    "google-auth-library": "10.7.0"
+  }
+}

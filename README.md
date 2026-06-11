@@ -38,3 +38,18 @@ przez GitHub Pages.
 W tej wersji dane są demonstracyjne i zapisują się wyłącznie w przeglądarce
 osoby testującej. Zmiany wykonane przez jednego instruktora nie są jeszcze
 widoczne u pozostałych osób.
+
+## Pilot dla instruktorów
+
+Na gałęzi `codex/live-instructor-pilot` znajduje się wersja podłączona do
+Firebase:
+
+- prawdziwe logowanie e-mail i hasłem,
+- wspólna baza Firestore w regionie Warszawa,
+- zdjęcia przygotowywane do wysłania do Cloud Storage,
+- powiadomienia wewnątrz aplikacji i obsługa Web Push,
+- dostęp ograniczony serwerowo do zatwierdzonych adresów instruktorów.
+
+Pilot: https://malina-ceramik-pilot-2026.web.app/
+
+Instrukcja konfiguracji i wdrożenia znajduje się w `LIVE_PILOT.md`.

@@ -1,0 +1,15 @@
+{
+  "name": "malina-ceramik-live-pilot",
+  "private": true,
+  "scripts": {
+    "firebase:login": "firebase login",
+    "firebase:use": "firebase use --add",
+    "deploy": "firebase deploy",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:hosting": "firebase deploy --only hosting"
+  },
+  "devDependencies": {
+    "firebase-tools": "15.20.0"
+  }
+}
