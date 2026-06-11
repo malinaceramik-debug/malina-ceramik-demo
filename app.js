@@ -667,26 +667,33 @@ function studentItems() {
   const tabs = [
     ["studio", "W pracowni", mine.filter((item) => item.status !== "collected").length],
     ["archive", "Archiwum", mine.filter((item) => item.status === "collected").length],
-    ["payments", "Moje opłaty", payments.length],
   ];
 
   return `
-    <div class="page-head">
-      <div>
-        <p class="eyebrow">Osobista galeria</p>
+    <div class="student-items-page">
+      <div class="page-head my-items-head">
+        <div>
         <h1>Moje wyroby</h1>
+        </div>
+        <button class="primary-button my-items-add" id="open-add-flow" type="button"><span class="button-icon">+</span> <span>Dodaj</span></button>
       </div>
-      <button class="primary-button" id="open-add-flow" type="button"><span class="button-icon">+</span> Dodaj wyroby</button>
+      <div class="my-items-navigation">
+        <div class="account-section-tabs" role="tablist" aria-label="Galerie moich wyrobów">
+          ${tabs
+            .map(
+              ([id, label, count]) =>
+                `<button class="${state.studentItemsTab === id ? "active" : ""}" data-items-tab="${id}" type="button" role="tab" aria-selected="${state.studentItemsTab === id}"><span>${label}</span><strong>${count}</strong></button>`,
+            )
+            .join("")}
+        </div>
+        <button class="payments-shortcut ${state.studentItemsTab === "payments" ? "active" : ""}" data-items-tab="payments" type="button" aria-pressed="${state.studentItemsTab === "payments"}">
+          ${icon("money")}
+          <span>Opłaty</span>
+          ${payments.length ? `<strong>${payments.length}</strong>` : ""}
+        </button>
+      </div>
+      ${studentItemsTabContent(mine, payments)}
     </div>
-    <div class="account-section-tabs" role="tablist" aria-label="Sekcje moich wyrobów">
-      ${tabs
-        .map(
-          ([id, label, count]) =>
-            `<button class="${state.studentItemsTab === id ? "active" : ""}" data-items-tab="${id}" type="button" role="tab" aria-selected="${state.studentItemsTab === id}"><span>${label}</span><strong>${count}</strong></button>`,
-        )
-        .join("")}
-    </div>
-    ${studentItemsTabContent(mine, payments)}
   `;
 }
 
@@ -739,22 +746,21 @@ function studentItemsTabContent(mine, payments) {
   return `
     ${
       state.studentItemsTab === "studio"
-        ? `<div class="filter-row">
+        ? `<div class="my-items-filter-row" aria-label="Filtr statusu">
             ${filters
               .map(
                 ([id, label]) =>
-                  `<button class="filter-chip status-filter ${id} ${state.studentFilter === id ? "active" : ""}" data-student-filter="${id}" type="button">${label}</button>`,
+                  `<button class="filter-chip quiet-filter status-filter ${id} ${state.studentFilter === id ? "active" : ""}" data-student-filter="${id}" type="button">${label}</button>`,
               )
               .join("")}
           </div>`
         : ""
     }
-    ${firingLegend()}
     <p class="gallery-gesture-hint">Przytrzymaj zdjęcie, aby otworzyć podgląd.</p>
     ${
       items.length
         ? state.studentItemsTab === "archive"
-          ? gallerySection("Odebrane wyroby", "Twoja ceramiczna historia pozostaje pod ręką.", items, false, "collected")
+          ? gallerySection("Odebrane", "", items, false, "collected")
           : studentGallerySections(items)
         : emptyState(
             state.studentItemsTab === "archive" ? "Archiwum jest puste" : "Tu jest pusto",
@@ -768,8 +774,8 @@ function studentItemsTabContent(mine, payments) {
 
 function studentGallerySections(items) {
   const sections = [
-    ["ready", "Do odbioru", "Te wyroby są już wypalone i czekają w pracowni."],
-    ["waiting", "Czekają na wypał", "Wyroby przyjęte przez pracownię."],
+    ["ready", "Do odbioru", ""],
+    ["waiting", "Czekają na wypał", ""],
   ];
 
   return sections
@@ -852,7 +858,7 @@ function gallerySection(title, copy, items, selectable, sectionId) {
       <div class="gallery-section-head">
         <div>
           <h2>${title}</h2>
-          <p>${copy}</p>
+          ${copy ? `<p>${copy}</p>` : ""}
         </div>
         <span>${items.length} ${pluralItems(items.length)}</span>
       </div>

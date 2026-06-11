@@ -2340,50 +2340,178 @@ h2 {
 .account-section-tabs {
   display: flex;
   width: fit-content;
-  max-width: 100%;
-  gap: 5px;
-  margin-bottom: 22px;
-  padding: 5px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 250, 246, 0.86);
+  gap: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .account-section-tabs button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 13px;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0;
   border: 0;
-  border-radius: 12px;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
   color: var(--muted);
   background: transparent;
   cursor: pointer;
   font: inherit;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 750;
 }
 
 .account-section-tabs button strong {
-  display: grid;
-  min-width: 22px;
-  height: 22px;
-  place-items: center;
-  border-radius: 999px;
-  color: var(--green-dark);
-  background: var(--green-soft);
+  color: inherit;
+  background: transparent;
   font-size: 9px;
+  opacity: 0.68;
 }
 
 .account-section-tabs button.active {
-  color: white;
-  background: var(--green);
+  border-color: var(--green);
+  color: var(--green-dark);
+  background: transparent;
 }
 
 .account-section-tabs button.active strong {
-  color: var(--green-dark);
-  background: white;
+  color: inherit;
+  background: transparent;
+  opacity: 1;
+}
+
+.student-items-page .my-items-head {
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.student-items-page .my-items-head h1 {
+  margin-bottom: 0;
+}
+
+.my-items-add {
+  min-height: 40px;
+  padding-inline: 15px;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 11px;
+}
+
+.my-items-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(209, 194, 181, 0.62);
+}
+
+.payments-shortcut {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.payments-shortcut .nav-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.payments-shortcut strong {
+  font-size: 9px;
+}
+
+.payments-shortcut.active {
+  color: var(--green);
+}
+
+.my-items-filter-row {
+  display: flex;
+  gap: 16px;
+  margin: -6px 0 18px;
+}
+
+.my-items-filter-row .quiet-filter {
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #9a948c;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.my-items-filter-row .quiet-filter::before {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #c8c1b8;
+  content: "";
+  vertical-align: 1px;
+}
+
+.my-items-filter-row .quiet-filter.ready::before {
+  background: var(--green);
+}
+
+.my-items-filter-row .quiet-filter.waiting::before {
+  background: var(--amber);
+}
+
+.my-items-filter-row .quiet-filter.active {
+  color: var(--ink);
+  background: transparent;
+}
+
+.student-items-page .gallery-section + .gallery-section {
+  margin-top: 30px;
+}
+
+.student-items-page .gallery-section-head {
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.student-items-page .gallery-section-head h2 {
+  font-size: 20px;
+}
+
+.student-items-page .gallery-section-head > span {
+  padding: 0;
+  background: transparent;
+  font-size: 9px;
+}
+
+.student-items-page .gallery-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.student-items-page .gallery-grid .item-card {
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.student-items-page .gallery-grid .item-photo {
+  aspect-ratio: 1;
+}
+
+.student-items-page .gallery-grid .item-body {
+  display: none;
 }
 
 .payments-summary,
@@ -3763,15 +3891,35 @@ h2 {
     gap: 11px;
   }
 
-  .account-section-tabs {
-    width: 100%;
-    overflow-x: auto;
+  .student-items-page .my-items-head {
+    display: flex;
+    margin-bottom: 14px;
   }
 
-  .account-section-tabs button {
-    flex: 1 0 auto;
-    justify-content: center;
-    padding-inline: 10px;
+  .student-items-page .my-items-head .primary-button {
+    width: auto;
+    margin-top: 0;
+  }
+
+  .student-items-page .my-items-head h1 {
+    font-size: 36px;
+  }
+
+  .my-items-navigation {
+    margin-bottom: 18px;
+  }
+
+  .account-section-tabs {
+    gap: 17px;
+  }
+
+  .payments-shortcut strong {
+    display: none;
+  }
+
+  .my-items-filter-row {
+    gap: 14px;
+    margin-bottom: 12px;
   }
 
   .payments-summary,
@@ -3834,6 +3982,15 @@ h2 {
     gap: 2px;
     margin-inline: -16px;
     background: var(--paper);
+  }
+
+  .student-items-page .gallery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+  }
+
+  .student-items-page .gallery-grid .item-card {
+    border-radius: 2px;
   }
 
   .gallery-grid .item-card {
