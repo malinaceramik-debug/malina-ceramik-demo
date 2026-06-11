@@ -364,6 +364,19 @@ a {
   border-top: 1px solid var(--line);
 }
 
+.personal-combinations-link {
+  margin-bottom: 14px;
+}
+
+.instructor-library-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mobile-personal-combinations {
+  display: none !important;
+}
+
 .utility-nav-label {
   margin: 0 12px 7px;
   color: #9a9189;
@@ -4296,6 +4309,20 @@ h2 {
   .journal-catalog-teaser .secondary-button {
     width: 100%;
     margin-top: 18px;
+  }
+
+  .instructor-library-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 18px;
+  }
+
+  .instructor-library-actions .secondary-button {
+    margin-top: 0;
+  }
+
+  .mobile-personal-combinations {
+    display: inline-flex !important;
   }
 
   .catalog-notice {

@@ -363,7 +363,7 @@ function showApplication(session) {
   state.role = session.role;
   if (
     (state.role === "student" && !["home", "my-items", "combinations", "glazes", "notifications"].includes(state.view)) ||
-    (state.role === "instructor" && !["gallery", "glazes", "journal", "notifications", "settlements", "clients", "archive"].includes(state.view))
+    (state.role === "instructor" && !["gallery", "glazes", "journal", "combinations", "notifications", "settlements", "clients", "archive"].includes(state.view))
   ) {
     state.view = state.role === "student" ? "home" : "gallery";
   }
@@ -636,6 +636,10 @@ function renderNav() {
   const utilityMarkup =
     state.role === "instructor"
       ? `
+        <button class="nav-button utility-nav-button personal-combinations-link ${state.view === "combinations" ? "active" : ""}" data-view="combinations" type="button">
+          ${icon("palette")}
+          <span>Moje kombinacje</span>
+        </button>
         <div class="utility-nav-label">Biblioteka wspólna</div>
         <button class="nav-button utility-nav-button ${state.view === utilityItem.id ? "active" : ""}" data-view="${utilityItem.id}" type="button">
           ${icon(utilityItem.icon)}
@@ -680,6 +684,7 @@ function render() {
     if (state.view === "gallery") content.innerHTML = instructorGallery();
     else if (state.view === "glazes") content.innerHTML = glazeCatalogView();
     else if (state.view === "journal") content.innerHTML = instructorCeramicsView();
+    else if (state.view === "combinations") content.innerHTML = studentCombinations();
     else if (state.view === "notifications") content.innerHTML = notificationsView();
     else if (state.view === "settlements") content.innerHTML = settlementsView();
     else if (state.view === "clients") content.innerHTML = clientsView();
@@ -866,8 +871,9 @@ function studentGallerySections(items) {
 }
 
 function studentCombinations() {
+  const ownerId = state.role === "student" ? "anna" : "marta";
   const allItems = state.items
-    .filter((item) => item.ownerId === "anna")
+    .filter((item) => item.ownerId === ownerId)
     .sort(
       (a, b) =>
         Number(isCombinationCategorized(a)) - Number(isCombinationCategorized(b)) ||
@@ -893,7 +899,7 @@ function studentCombinations() {
         <p class="eyebrow">Prywatny dziennik ceramiczny</p>
         <h1>Moje kombinacje</h1>
       </div>
-      <button class="primary-button" id="open-combination-flow" type="button"><span class="button-icon">+</span> Dodaj wpis</button>
+      <button class="primary-button" id="${state.role === "student" ? "open-combination-flow" : "open-add-flow"}" type="button"><span class="button-icon">+</span> ${state.role === "student" ? "Dodaj wpis" : "Dodaj wyrób"}</button>
     </div>
     <div class="combination-stats" aria-label="Filtry dziennika">
       ${combinationStatButton("categorized", categorized.length, "Zapisane kombinacje")}
@@ -1114,7 +1120,10 @@ function instructorCeramicsView() {
         <p class="eyebrow">Wspólna biblioteka</p>
         <h2>Porównaj swoje efekty z innymi</h2>
       </div>
-      <button class="secondary-button" data-view="glazes" type="button">Wspólne kombinacje</button>
+      <div class="instructor-library-actions">
+        <button class="secondary-button mobile-personal-combinations" data-view="combinations" type="button">Moje kombinacje</button>
+        <button class="secondary-button" data-view="glazes" type="button">Wspólne kombinacje</button>
+      </div>
     </article>
   `;
 }
@@ -1745,9 +1754,10 @@ function attachViewListeners() {
   });
 
   document.querySelector("#start-combination-sharing")?.addEventListener("click", () => {
+    const ownerId = state.role === "student" ? "anna" : "marta";
     combinationShareMode = true;
     combinationShareSelection = state.items
-      .filter((item) => item.ownerId === "anna" && isCombinationShared(item))
+      .filter((item) => item.ownerId === ownerId && isCombinationShared(item))
       .map((item) => item.id);
     state.combinationFilter = "all";
     render();
@@ -1760,8 +1770,9 @@ function attachViewListeners() {
   });
 
   document.querySelector("#save-combination-sharing")?.addEventListener("click", () => {
+    const ownerId = state.role === "student" ? "anna" : "marta";
     state.items = state.items.map((item) => {
-      if (item.ownerId !== "anna" || !isCombinationCategorized(item)) return item;
+      if (item.ownerId !== ownerId || !isCombinationCategorized(item)) return item;
       const sharing = normalizeSharing(item.sharing);
       const selected = combinationShareSelection.includes(item.id);
       return {
