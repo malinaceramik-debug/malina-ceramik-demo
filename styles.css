@@ -1833,7 +1833,7 @@ h2 {
   padding: 7px 9px;
   border: 1px solid var(--brand-border, transparent);
   border-radius: 13px;
-  background: color-mix(in srgb, var(--brand-bg, transparent) 56%, white);
+  background: color-mix(in srgb, var(--brand-bg, transparent) 70%, white);
 }
 
 .catalog-brand-models h4 {
@@ -1890,10 +1890,10 @@ h2 {
 }
 
 .catalog-chip.brand-themed.active {
-  border-color: var(--brand-text);
+  border-color: var(--brand-border);
   color: var(--brand-text);
-  background: color-mix(in srgb, var(--brand-bg) 62%, var(--brand-border));
-  box-shadow: 0 5px 15px color-mix(in srgb, var(--brand-border) 28%, transparent);
+  background: color-mix(in srgb, var(--brand-bg) 82%, var(--brand-border));
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand-border) 16%, transparent);
 }
 
 .catalog-clear {
@@ -1992,7 +1992,7 @@ h2 {
 .catalog-result-tags .brand-themed {
   border: 1px solid var(--brand-border);
   color: var(--brand-text);
-  background: var(--brand-bg);
+  background: color-mix(in srgb, var(--brand-bg) 82%, white);
 }
 
 .catalog-result-body > p {

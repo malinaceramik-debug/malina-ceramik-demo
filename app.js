@@ -1174,14 +1174,14 @@ function catalogChipList(options, selected, type, fixedBrand = null) {
 
 function brandThemeStyle(brand, type) {
   const themes = {
-    Amaco: ["#f8e5dc", "#d99a7d", "#754535"],
-    Botz: ["#e2edf3", "#91b2c4", "#34576b"],
-    "G&S": ["#e5efe4", "#9fba9b", "#405d3f"],
-    Silbeco: ["#eee7f3", "#b9a4c8", "#5f4b6e"],
+    Amaco: ["#fcf5f1", "#e8c7b8", "#765548"],
+    Botz: ["#f3f8fa", "#bed4df", "#4f6977"],
+    "G&S": ["#f4f8f3", "#c5d6c2", "#536a52"],
+    Silbeco: ["#f7f4f9", "#d6c9df", "#695b72"],
   };
   const fallback = type.startsWith("clay")
-    ? ["#f1eadb", "#c8b58f", "#655638"]
-    : ["#e8eee8", "#aabbaa", "#405740"];
+    ? ["#faf7f0", "#ded2b9", "#6b604a"]
+    : ["#f5f8f5", "#ccd7cc", "#526252"];
   const [background, border, color] = themes[brand] || fallback;
   return `--brand-bg:${background};--brand-border:${border};--brand-text:${color}`;
 }
