@@ -1,4 +1,17 @@
 const STORAGE_KEY = "malina-ceramik-pwa-demo-v2";
+const SESSION_KEY = "malina-ceramik-demo-session";
+const demoAccounts = {
+  "anna@malinaceramik.pl": {
+    password: "malina123",
+    role: "student",
+    name: "Anna Kowalska",
+  },
+  "marta@malinaceramik.pl": {
+    password: "malina123",
+    role: "instructor",
+    name: "Marta Wiśniewska",
+  },
+};
 
 const icons = {
   home: `<svg viewBox="0 0 24 24"><path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>`,
@@ -333,6 +346,62 @@ let combinationShareMode = false;
 let combinationShareSelection = [];
 let toastTimer;
 
+function currentSession() {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function showLogin() {
+  document.querySelector("#login-screen").classList.remove("hidden");
+  document.querySelector("#app-shell").classList.add("hidden");
+  document.querySelector("#mobile-nav").classList.add("hidden");
+  document.body.classList.add("login-visible");
+  document.querySelector("#login-email").focus();
+}
+
+function showApplication(session) {
+  state.role = session.role;
+  if (
+    (state.role === "student" && !["home", "my-items", "combinations", "glazes", "notifications"].includes(state.view)) ||
+    (state.role === "instructor" && !["gallery", "glazes", "journal", "settlements", "clients", "archive"].includes(state.view))
+  ) {
+    state.view = state.role === "student" ? "home" : "gallery";
+  }
+  document.querySelector("#login-screen").classList.add("hidden");
+  document.querySelector("#app-shell").classList.remove("hidden");
+  document.querySelector("#mobile-nav").classList.remove("hidden");
+  document.body.classList.remove("login-visible");
+  render();
+}
+
+function login(email, password) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const account = demoAccounts[normalizedEmail];
+  if (!account || account.password !== password) {
+    const error = document.querySelector("#login-error");
+    error.textContent = "Nieprawidłowy e-mail lub hasło.";
+    error.classList.remove("hidden");
+    return;
+  }
+  const session = { email: normalizedEmail, role: account.role, name: account.name };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  state.role = account.role;
+  state.view = account.role === "student" ? "home" : "gallery";
+  saveState();
+  document.querySelector("#login-error").classList.add("hidden");
+  showApplication(session);
+}
+
+function logout() {
+  localStorage.removeItem(SESSION_KEY);
+  document.querySelector("#profile-menu").classList.add("hidden");
+  document.querySelector("#login-form").reset();
+  showLogin();
+}
+
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -574,11 +643,17 @@ function renderNav() {
 
 function renderProfile() {
   const isStudent = state.role === "student";
+  const session = currentSession();
   document.querySelector("#avatar").textContent = isStudent ? "AK" : "MW";
   document.querySelector("#profile-name").textContent = isStudent
     ? "Anna Kowalska"
     : "Marta Wiśniewska";
   document.querySelector("#profile-role").textContent = isStudent ? "Kursantka" : "Instruktorka";
+  document.querySelector("#profile-menu-name").textContent = isStudent
+    ? "Anna Kowalska"
+    : "Marta Wiśniewska";
+  document.querySelector("#profile-menu-email").textContent =
+    session?.email || (isStudent ? "anna@malinaceramik.pl" : "marta@malinaceramik.pl");
   document.querySelectorAll("[data-role]").forEach((button) => {
     button.classList.toggle("active", button.dataset.role === state.role);
   });
@@ -3044,10 +3119,64 @@ document.querySelectorAll("[data-role]").forEach((button) => {
     state.selected = [];
     combinationShareMode = false;
     combinationShareSelection = [];
+    const session = currentSession();
+    if (session) {
+      localStorage.setItem(
+        SESSION_KEY,
+        JSON.stringify({
+          ...session,
+          role: state.role,
+          email:
+            state.role === "student"
+              ? "anna@malinaceramik.pl"
+              : "marta@malinaceramik.pl",
+          name: state.role === "student" ? "Anna Kowalska" : "Marta Wiśniewska",
+        }),
+      );
+    }
     saveState();
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
+});
+
+document.querySelector("#login-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  login(
+    document.querySelector("#login-email").value,
+    document.querySelector("#login-password").value,
+  );
+});
+
+document.querySelector("#toggle-password").addEventListener("click", (event) => {
+  const input = document.querySelector("#login-password");
+  const visible = input.type === "text";
+  input.type = visible ? "password" : "text";
+  event.currentTarget.textContent = visible ? "Pokaż" : "Ukryj";
+  event.currentTarget.setAttribute("aria-label", visible ? "Pokaż hasło" : "Ukryj hasło");
+});
+
+document.querySelectorAll("[data-demo-login]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const student = button.dataset.demoLogin === "student";
+    document.querySelector("#login-email").value = student
+      ? "anna@malinaceramik.pl"
+      : "marta@malinaceramik.pl";
+    document.querySelector("#login-password").value = "malina123";
+    document.querySelector("#login-error").classList.add("hidden");
+  });
+});
+
+document.querySelector("#profile-button").addEventListener("click", () => {
+  document.querySelector("#profile-menu").classList.toggle("hidden");
+});
+
+document.querySelector("#logout-button").addEventListener("click", logout);
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("#profile-button") && !event.target.closest("#profile-menu")) {
+    document.querySelector("#profile-menu").classList.add("hidden");
+  }
 });
 
 document.querySelector("#reset-demo").addEventListener("click", () => {
@@ -3064,7 +3193,10 @@ document.querySelector("#modal-backdrop").addEventListener("click", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeModal();
+  if (event.key === "Escape") {
+    closeModal();
+    document.querySelector("#profile-menu").classList.add("hidden");
+  }
 });
 
 document.querySelector("#photo-input").addEventListener("change", (event) => {
@@ -3118,4 +3250,6 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
 }
 
-render();
+const savedSession = currentSession();
+if (savedSession && demoAccounts[savedSession.email]) showApplication(savedSession);
+else showLogin();

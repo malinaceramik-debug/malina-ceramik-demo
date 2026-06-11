@@ -15,7 +15,49 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <main class="login-screen" id="login-screen">
+      <section class="login-visual" aria-hidden="true">
+        <img class="login-visual-wordmark" src="assets/malina-wordmark.png" alt="" />
+        <div class="login-visual-copy">
+          <span>Malina Ceramik</span>
+          <h1>Twoja ceramika.<br />W jednym miejscu.</h1>
+        </div>
+      </section>
+      <section class="login-panel">
+        <div class="login-card">
+          <div class="login-mobile-brand">
+            <span class="mobile-logo-badge"><img src="assets/malina-apron.png" alt="" /></span>
+            <img src="assets/malina-wordmark.png" alt="Malina ceramik, studio ceramiki" />
+          </div>
+          <p class="eyebrow">Aplikacja pracowni</p>
+          <h2>Witaj ponownie</h2>
+          <form class="login-form" id="login-form" novalidate>
+            <label class="login-field">
+              <span>Adres e-mail</span>
+              <input id="login-email" name="email" type="email" autocomplete="email" placeholder="twoj@email.pl" required />
+            </label>
+            <label class="login-field">
+              <span>Hasło</span>
+              <span class="password-input">
+                <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+                <button id="toggle-password" type="button" aria-label="Pokaż hasło">Pokaż</button>
+              </span>
+            </label>
+            <p class="login-error hidden" id="login-error" role="alert"></p>
+            <button class="primary-button login-submit" type="submit">Zaloguj się</button>
+          </form>
+          <div class="demo-login">
+            <span>Wersja demo</span>
+            <div>
+              <button data-demo-login="student" type="button">Kursant</button>
+              <button data-demo-login="instructor" type="button">Instruktor</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="app-shell hidden" id="app-shell">
       <aside class="sidebar" aria-label="Nawigacja główna">
         <a class="brand" href="#" aria-label="Malina ceramik studio ceramiki">
           <img
@@ -66,13 +108,18 @@
             </span>
             <span class="chevron" aria-hidden="true">⌄</span>
           </button>
+          <div class="profile-menu hidden" id="profile-menu">
+            <strong id="profile-menu-name">Anna Kowalska</strong>
+            <span id="profile-menu-email">anna@malinaceramik.pl</span>
+            <button id="logout-button" type="button">Wyloguj się</button>
+          </div>
         </header>
 
         <section class="content" id="app-content" aria-live="polite"></section>
       </main>
     </div>
 
-    <nav class="mobile-nav" id="mobile-nav" aria-label="Nawigacja mobilna"></nav>
+    <nav class="mobile-nav hidden" id="mobile-nav" aria-label="Nawigacja mobilna"></nav>
 
     <div class="modal-backdrop hidden" id="modal-backdrop">
       <section
