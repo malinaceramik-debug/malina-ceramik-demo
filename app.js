@@ -277,6 +277,7 @@ const initialState = {
   view: "home",
   studentFilter: "all",
   studentItemsTab: "studio",
+  combinationFilter: "all",
   instructorStatus: "all",
   instructorFiring: "all",
   catalogGlazeBrands: [],
@@ -328,6 +329,8 @@ let addFlow = {
 let recipeDraft = null;
 let finalPhotoTargetId = null;
 let journalDraft = null;
+let combinationShareMode = false;
+let combinationShareSelection = [];
 let toastTimer;
 
 function loadState() {
@@ -370,7 +373,13 @@ function loadState() {
     ) {
       payments.unshift(structuredClone(demoStudentPayment));
     }
-    return { ...initialState, ...saved, items, payments };
+    return {
+      ...initialState,
+      ...saved,
+      studentItemsTab: saved.studentItemsTab === "payments" ? "payments" : "studio",
+      items,
+      payments,
+    };
   } catch {
     return structuredClone(initialState);
   }
@@ -388,6 +397,19 @@ function normalizeRecipe(recipe = {}) {
     temperature: Array.isArray(recipe.temperature) ? recipe.temperature : [],
     note: recipe.note || "",
   };
+}
+
+function isCombinationCategorized(item) {
+  const recipe = normalizeRecipe(item.recipe);
+  return (
+    recipeCategories.some((category) => recipe[category.id].length) ||
+    Boolean(recipe.note)
+  );
+}
+
+function isCombinationShared(item) {
+  const sharing = normalizeSharing(item.sharing);
+  return sharing.combination && sharing.imageIds.length;
 }
 
 function normalizeFinalImages(images = []) {
@@ -664,10 +686,7 @@ function statCard(label, count, status, filter) {
 function studentItems() {
   const mine = state.items.filter((item) => item.ownerId === "anna" && !item.personalJournal);
   const payments = state.payments.filter((payment) => payment.owner === "Anna Kowalska");
-  const tabs = [
-    ["studio", "W pracowni", mine.filter((item) => item.status !== "collected").length],
-    ["archive", "Archiwum", mine.filter((item) => item.status === "collected").length],
-  ];
+  const showingPayments = state.studentItemsTab === "payments";
 
   return `
     <div class="student-items-page">
@@ -678,18 +697,11 @@ function studentItems() {
         <button class="primary-button my-items-add" id="open-add-flow" type="button"><span class="button-icon">+</span> <span>Dodaj</span></button>
       </div>
       <div class="my-items-navigation">
-        <div class="account-section-tabs" role="tablist" aria-label="Galerie moich wyrobów">
-          ${tabs
-            .map(
-              ([id, label, count]) =>
-                `<button class="${state.studentItemsTab === id ? "active" : ""}" data-items-tab="${id}" type="button" role="tab" aria-selected="${state.studentItemsTab === id}"><span>${label}</span><strong>${count}</strong></button>`,
-            )
-            .join("")}
-        </div>
-        <button class="payments-shortcut ${state.studentItemsTab === "payments" ? "active" : ""}" data-items-tab="payments" type="button" aria-pressed="${state.studentItemsTab === "payments"}">
-          ${icon("money")}
-          <span>Opłaty</span>
-          ${payments.length ? `<strong>${payments.length}</strong>` : ""}
+        <span>${showingPayments ? "Historia opłat" : `${mine.length} ${pluralItems(mine.length)}`}</span>
+        <button class="payments-shortcut ${showingPayments ? "active" : ""}" data-items-tab="${showingPayments ? "studio" : "payments"}" type="button">
+          ${icon(showingPayments ? "gallery" : "money")}
+          <span>${showingPayments ? "Wróć do wyrobów" : "Opłaty"}</span>
+          ${!showingPayments && payments.length ? `<strong>${payments.length}</strong>` : ""}
         </button>
       </div>
       ${studentItemsTabContent(mine, payments)}
@@ -727,46 +739,31 @@ function studentItemsTabContent(mine, payments) {
     ["all", "Wszystkie"],
     ["ready", "Do odbioru"],
     ["waiting", "Czekają"],
+    ["collected", "Odebrane"],
   ];
   const items = mine
-    .filter((item) =>
-      state.studentItemsTab === "archive" ? item.status === "collected" : item.status !== "collected",
-    )
-    .filter(
-      (item) =>
-        state.studentItemsTab === "archive" ||
-        state.studentFilter === "all" ||
-        item.status === state.studentFilter,
-    )
+    .filter((item) => state.studentFilter === "all" || item.status === state.studentFilter)
     .sort((a, b) => {
       const priority = { ready: 0, waiting: 1, collected: 2 };
       return priority[a.status] - priority[b.status] || b.date.localeCompare(a.date);
     });
 
   return `
-    ${
-      state.studentItemsTab === "studio"
-        ? `<div class="my-items-filter-row" aria-label="Filtr statusu">
-            ${filters
-              .map(
-                ([id, label]) =>
-                  `<button class="filter-chip quiet-filter status-filter ${id} ${state.studentFilter === id ? "active" : ""}" data-student-filter="${id}" type="button">${label}</button>`,
-              )
-              .join("")}
-          </div>`
-        : ""
-    }
+    <div class="my-items-filter-row" aria-label="Filtr statusu">
+      ${filters
+        .map(
+          ([id, label]) =>
+            `<button class="filter-chip quiet-filter status-filter ${id} ${state.studentFilter === id ? "active" : ""}" data-student-filter="${id}" type="button">${label}</button>`,
+        )
+        .join("")}
+    </div>
     <p class="gallery-gesture-hint">Przytrzymaj zdjęcie, aby otworzyć podgląd.</p>
     ${
       items.length
-        ? state.studentItemsTab === "archive"
-          ? gallerySection("Odebrane", "", items, false, "collected")
-          : studentGallerySections(items)
+        ? studentGallerySections(items)
         : emptyState(
-            state.studentItemsTab === "archive" ? "Archiwum jest puste" : "Tu jest pusto",
-            state.studentItemsTab === "archive"
-              ? "Odebrane wyroby pojawią się tutaj."
-              : "Zmień filtr albo dodaj nowy wyrób.",
+            "Tu jest pusto",
+            "Zmień filtr albo dodaj nowy wyrób.",
           )
     }
   `;
@@ -776,6 +773,7 @@ function studentGallerySections(items) {
   const sections = [
     ["ready", "Do odbioru", ""],
     ["waiting", "Czekają na wypał", ""],
+    ["collected", "Odebrane", ""],
   ];
 
   return sections
@@ -786,22 +784,26 @@ function studentGallerySections(items) {
 }
 
 function studentCombinations() {
-  const items = state.items
+  const allItems = state.items
     .filter((item) => item.ownerId === "anna")
-    .filter((item) => {
-      const recipe = normalizeRecipe(item.recipe);
-      return (
-        item.personalJournal ||
-        recipeCategories.some((category) => recipe[category.id].length) ||
-        recipe.note
-      );
-    })
-    .sort((a, b) => b.date.localeCompare(a.date));
-  const shared = items.filter((item) => {
-    const sharing = normalizeSharing(item.sharing);
-    return sharing.combination && sharing.imageIds.length;
-  }).length;
-  const withFinal = items.filter((item) => normalizeFinalImages(item.finalImages).length).length;
+    .sort(
+      (a, b) =>
+        Number(isCombinationCategorized(a)) - Number(isCombinationCategorized(b)) ||
+        b.date.localeCompare(a.date) ||
+        b.id - a.id,
+    );
+  const categorized = allItems.filter(isCombinationCategorized);
+  const withFinal = allItems.filter((item) => normalizeFinalImages(item.finalImages).length);
+  const shared = allItems.filter(isCombinationShared);
+  const collected = allItems.filter((item) => item.status === "collected");
+  const categorizedCollected = collected.filter(isCombinationCategorized).length;
+  const filteredItems = allItems.filter((item) => {
+    if (state.combinationFilter === "categorized") return isCombinationCategorized(item);
+    if (state.combinationFilter === "final") return normalizeFinalImages(item.finalImages).length;
+    if (state.combinationFilter === "shared") return isCombinationShared(item);
+    if (state.combinationFilter === "collected") return item.status === "collected";
+    return true;
+  });
 
   return `
     <div class="page-head combinations-page-head">
@@ -811,40 +813,92 @@ function studentCombinations() {
       </div>
       <button class="primary-button" id="open-combination-flow" type="button"><span class="button-icon">+</span> Dodaj wpis</button>
     </div>
-    <div class="combination-stats">
-      <div><strong>${items.length}</strong><span>zapisanych kombinacji</span></div>
-      <div><strong>${withFinal}</strong><span>z efektem finalnym</span></div>
-      <div><strong>${shared}</strong><span>udostępnionych pracowni</span></div>
+    <div class="combination-stats" aria-label="Filtry dziennika">
+      ${combinationStatButton("categorized", categorized.length, "Zapisane kombinacje")}
+      ${combinationStatButton("final", withFinal.length, "Z efektem finalnym")}
+      <div class="combination-stat-share">
+        ${combinationStatButton("shared", shared.length, "Udostępnione pracowni")}
+        <button class="combination-share-plus ${combinationShareMode ? "active" : ""}" id="start-combination-sharing" type="button" aria-label="Zmień udostępnianie kombinacji">+</button>
+      </div>
+      ${combinationStatButton(
+        "collected",
+        `${categorizedCollected}/${collected.length}`,
+        "Skatalogowane odebrane",
+      )}
     </div>
-    <div class="privacy-note">
-      ${icon("palette")}
-      <div><strong>To jest Twój prywatny dziennik</strong><span>Otwórz wpis, aby zdecydować, czy udostępnić kombinację, notatkę i wybrane zdjęcia we wspólnym katalogu.</span></div>
+    <div class="combination-journal-head">
+      <div>
+        <p class="eyebrow">Dziennik</p>
+        <h2>${combinationFilterLabel(state.combinationFilter)}</h2>
+      </div>
+      <span>${filteredItems.length} ${pluralItems(filteredItems.length)}</span>
     </div>
     ${
-      items.length
-        ? `<div class="combination-grid">${items.map(combinationCard).join("")}</div>`
-        : emptyState("Jeszcze bez kombinacji", "Dodaj notatkę zdobienia przy swoim wyrobie, a pojawi się tutaj.")
+      filteredItems.length
+        ? `<div class="combination-grid">${filteredItems.map(combinationCard).join("")}</div>`
+        : emptyState("Brak wyrobów", "Wybierz inny filtr.")
+    }
+    ${
+      combinationShareMode
+        ? `<div class="combination-share-bar">
+            <strong>Wybrano ${combinationShareSelection.length}</strong>
+            <div>
+              <button class="secondary-button" id="cancel-combination-sharing" type="button">Anuluj</button>
+              <button class="primary-button" id="save-combination-sharing" type="button">Zapisz udostępnianie</button>
+            </div>
+          </div>`
+        : ""
     }
   `;
 }
 
+function combinationStatButton(filter, value, label) {
+  return `
+    <button class="combination-stat ${state.combinationFilter === filter ? "active" : ""}" data-combination-filter="${filter}" type="button" aria-pressed="${state.combinationFilter === filter}">
+      <strong>${value}</strong>
+      <span>${label}</span>
+    </button>
+  `;
+}
+
+function combinationFilterLabel(filter) {
+  const labels = {
+    categorized: "Zapisane kombinacje",
+    final: "Z efektem finalnym",
+    shared: "Udostępnione pracowni",
+    collected: "Odebrane wyroby",
+  };
+  return labels[filter] || "Wszystkie wyroby";
+}
+
 function combinationCard(item) {
   const recipe = normalizeRecipe(item.recipe);
-  const sharing = normalizeSharing(item.sharing);
-  const isShared = sharing.combination && sharing.imageIds.length;
+  const categorized = isCombinationCategorized(item);
+  const isShared = isCombinationShared(item);
+  const shareSelectable = combinationShareMode && categorized;
+  const selected = combinationShareSelection.includes(item.id);
   const materials = [...recipe.clay, ...recipe.glazes, ...recipe.paints, ...recipe.temperature];
   return `
-    <article class="combination-card" data-item-id="${item.id}" data-selectable="false" role="button" tabindex="0" aria-label="Otwórz kombinację ${escapeHtml(studentItemLabel(item))}">
+    <article class="combination-card ${categorized ? "categorized" : "uncategorized"} ${selected ? "share-selected" : ""}" data-item-id="${item.id}" data-selectable="false" data-share-selectable="${shareSelectable}" role="button" tabindex="0" aria-label="${shareSelectable ? "Zaznacz do udostępnienia" : `Otwórz ${escapeHtml(studentItemLabel(item))}`}">
       <div class="combination-card-photo">
         <img src="${displayItemImage(item)}" alt="" />
-        <span class="sharing-badge ${isShared ? "shared" : "private"}">${isShared ? "Udostępniona" : "Prywatna"}</span>
+        ${
+          shareSelectable
+            ? `<span class="combination-share-check" aria-hidden="true">${selected ? "✓" : ""}</span>`
+            : `<span class="sharing-badge ${isShared ? "shared" : "private"}">${isShared ? "Udostępniona" : categorized ? "Prywatna" : "Do uzupełnienia"}</span>`
+        }
       </div>
       <div class="combination-card-body">
         <small>${formatFullDate(item.date)}</small>
         <h2>${escapeHtml(studentItemLabel(item))}</h2>
-        <div class="combination-tags">
-          ${materials.slice(0, 5).map((value) => `<span>${escapeHtml(value)}</span>`).join("")}
-        </div>
+        ${
+          materials.length
+            ? `<div class="combination-tags">${materials
+                .slice(0, 5)
+                .map((value) => `<span>${escapeHtml(value)}</span>`)
+                .join("")}</div>`
+            : '<span class="combination-empty-label">Dodaj materiały</span>'
+        }
         ${recipe.note ? `<p>${escapeHtml(recipe.note)}</p>` : ""}
       </div>
     </article>
@@ -1516,8 +1570,7 @@ function attachViewListeners() {
   document.querySelectorAll("[data-stat-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.studentFilter = button.dataset.statFilter;
-      state.studentItemsTab =
-        button.dataset.statFilter === "collected" ? "archive" : "studio";
+      state.studentItemsTab = "studio";
       state.view = "my-items";
       saveState();
       render();
@@ -1540,6 +1593,56 @@ function attachViewListeners() {
       saveState();
       render();
     });
+  });
+
+  document.querySelectorAll("[data-combination-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.combinationFilter =
+        state.combinationFilter === button.dataset.combinationFilter
+          ? "all"
+          : button.dataset.combinationFilter;
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelector("#start-combination-sharing")?.addEventListener("click", () => {
+    combinationShareMode = true;
+    combinationShareSelection = state.items
+      .filter((item) => item.ownerId === "anna" && isCombinationShared(item))
+      .map((item) => item.id);
+    state.combinationFilter = "all";
+    render();
+  });
+
+  document.querySelector("#cancel-combination-sharing")?.addEventListener("click", () => {
+    combinationShareMode = false;
+    combinationShareSelection = [];
+    render();
+  });
+
+  document.querySelector("#save-combination-sharing")?.addEventListener("click", () => {
+    state.items = state.items.map((item) => {
+      if (item.ownerId !== "anna" || !isCombinationCategorized(item)) return item;
+      const sharing = normalizeSharing(item.sharing);
+      const selected = combinationShareSelection.includes(item.id);
+      return {
+        ...item,
+        sharing: {
+          ...sharing,
+          combination: selected,
+          imageIds:
+            selected && !sharing.imageIds.length
+              ? [normalizeFinalImages(item.finalImages).at(-1)?.id || "before"]
+              : sharing.imageIds,
+        },
+      };
+    });
+    combinationShareMode = false;
+    combinationShareSelection = [];
+    saveState();
+    render();
+    showToast("Udostępnianie kombinacji zostało zapisane.");
   });
 
   document.querySelectorAll("[data-catalog-filter]").forEach((button) => {
@@ -1648,6 +1751,7 @@ function attachGalleryInteractions() {
     .forEach((card) => {
     const itemId = Number(card.dataset.itemId);
     const selectable = card.dataset.selectable === "true";
+    const shareSelectable = card.dataset.shareSelectable === "true";
     let pressTimer;
     let longPressTriggered = false;
     let startX = 0;
@@ -1660,6 +1764,7 @@ function attachGalleryInteractions() {
     card.addEventListener("contextmenu", (event) => event.preventDefault());
     card.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
+      if (shareSelectable) return;
       longPressTriggered = false;
       startX = event.clientX;
       startY = event.clientY;
@@ -1682,11 +1787,15 @@ function attachGalleryInteractions() {
         longPressTriggered = false;
         return;
       }
-      if (selectable) toggleSelection(itemId);
+      if (shareSelectable) toggleCombinationShareSelection(itemId);
+      else if (selectable) toggleSelection(itemId);
       else openItemPreview(itemId);
     });
     card.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !selectable) {
+      if ((event.key === "Enter" || event.key === " ") && shareSelectable) {
+        event.preventDefault();
+        toggleCombinationShareSelection(itemId);
+      } else if (event.key === "Enter" && !selectable) {
         event.preventDefault();
         openItemPreview(itemId);
       } else if ((event.key === "Enter" || event.key === " ") && selectable) {
@@ -1695,6 +1804,13 @@ function attachGalleryInteractions() {
       }
     });
     });
+}
+
+function toggleCombinationShareSelection(itemId) {
+  combinationShareSelection = combinationShareSelection.includes(itemId)
+    ? combinationShareSelection.filter((id) => id !== itemId)
+    : [...combinationShareSelection, itemId];
+  render();
 }
 
 function openItemPreview(itemId) {
@@ -2898,6 +3014,8 @@ document.querySelectorAll("[data-role]").forEach((button) => {
     state.role = button.dataset.role;
     state.view = state.role === "student" ? "home" : "gallery";
     state.selected = [];
+    combinationShareMode = false;
+    combinationShareSelection = [];
     saveState();
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2907,6 +3025,8 @@ document.querySelectorAll("[data-role]").forEach((button) => {
 document.querySelector("#reset-demo").addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEY);
   state = structuredClone(initialState);
+  combinationShareMode = false;
+  combinationShareSelection = [];
   render();
   showToast("Dane demonstracyjne zostały przywrócone.");
 });

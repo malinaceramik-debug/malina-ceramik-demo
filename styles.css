@@ -2408,6 +2408,12 @@ h2 {
   border-bottom: 1px solid rgba(209, 194, 181, 0.62);
 }
 
+.my-items-navigation > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .payments-shortcut {
   display: inline-flex;
   min-height: 32px;
@@ -2472,6 +2478,10 @@ h2 {
   background: var(--amber);
 }
 
+.my-items-filter-row .quiet-filter.collected::before {
+  background: var(--blue);
+}
+
 .my-items-filter-row .quiet-filter.active {
   color: var(--ink);
   background: transparent;
@@ -2526,11 +2536,12 @@ h2 {
 }
 
 .combination-stats {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .payments-summary div,
-.combination-stats div {
+.combination-stat,
+.combination-stat-share {
   padding: 17px;
   border: 1px solid var(--line);
   border-radius: 17px;
@@ -2539,55 +2550,99 @@ h2 {
 
 .payments-summary small,
 .payments-summary strong,
-.combination-stats strong,
-.combination-stats span {
+.combination-stat strong,
+.combination-stat span {
   display: block;
 }
 
 .payments-summary small,
-.combination-stats span {
+.combination-stat span {
   color: var(--muted);
   font-size: 10px;
 }
 
 .payments-summary strong,
-.combination-stats strong {
+.combination-stat strong {
   margin-top: 3px;
   font-family: Georgia, serif;
   font-size: 27px;
   font-weight: 500;
 }
 
-.privacy-note {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 22px;
-  padding: 14px 16px;
-  border: 1px solid #d5e2da;
-  border-radius: 16px;
-  color: var(--green-dark);
+.combination-stat {
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.combination-stat:hover {
+  transform: translateY(-1px);
+  border-color: #b9c9bf;
+}
+
+.combination-stat.active {
+  border-color: var(--green);
   background: #edf5f0;
 }
 
-.privacy-note .nav-icon {
-  flex: 0 0 auto;
+.combination-stat-share {
+  position: relative;
+  padding: 0;
 }
 
-.privacy-note strong,
-.privacy-note span {
-  display: block;
+.combination-stat-share .combination-stat {
+  height: 100%;
+  padding: 17px 48px 17px 17px;
+  border: 0;
+  background: transparent;
 }
 
-.privacy-note strong {
-  margin-bottom: 2px;
-  font-size: 12px;
+.combination-share-plus {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #cbd8d0;
+  border-radius: 50%;
+  color: var(--green);
+  background: white;
+  cursor: pointer;
+  font-size: 18px;
 }
 
-.privacy-note span {
+.combination-share-plus.active {
+  color: white;
+  background: var(--green);
+}
+
+.combination-journal-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 34px 0 14px;
+}
+
+.combination-journal-head .eyebrow {
+  margin-bottom: 3px;
+}
+
+.combination-journal-head h2 {
+  margin: 0;
+  font-size: 27px;
+}
+
+.combination-journal-head > span {
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.45;
+  font-size: 9px;
+  font-weight: 750;
 }
 
 .combination-grid {
@@ -2597,12 +2652,23 @@ h2 {
 }
 
 .combination-card {
+  position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 19px;
   background: var(--surface);
   box-shadow: 0 9px 25px rgba(52, 45, 35, 0.055);
   cursor: pointer;
+}
+
+.combination-card.uncategorized {
+  border-color: #dfcbb8;
+  background: #fffaf5;
+}
+
+.combination-card.share-selected {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-soft);
 }
 
 .combination-card-photo {
@@ -2630,6 +2696,27 @@ h2 {
   position: absolute;
   top: 10px;
   right: 10px;
+}
+
+.combination-share-check {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  color: white;
+  background: rgba(34, 42, 38, 0.28);
+  box-shadow: 0 3px 12px rgba(31, 34, 31, 0.18);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.combination-card.share-selected .combination-share-check {
+  background: var(--green);
 }
 
 .sharing-badge.private {
@@ -2681,6 +2768,49 @@ h2 {
   background: var(--green-soft);
   font-size: 8px;
   font-weight: 800;
+}
+
+.combination-empty-label {
+  display: inline-flex;
+  padding: 6px 8px;
+  border-radius: 999px;
+  color: #865d3b;
+  background: #f7e7d7;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.combination-share-bar {
+  position: fixed;
+  z-index: 20;
+  right: 28px;
+  bottom: 24px;
+  left: 276px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 13px 16px;
+  border: 1px solid #cbd8d0;
+  border-radius: 18px;
+  background: rgba(255, 252, 248, 0.94);
+  box-shadow: 0 16px 45px rgba(37, 44, 39, 0.18);
+  backdrop-filter: blur(14px);
+}
+
+.combination-share-bar > div {
+  display: flex;
+  gap: 8px;
+}
+
+.combination-share-bar strong {
+  font-size: 11px;
+}
+
+.combination-share-bar .primary-button,
+.combination-share-bar .secondary-button {
+  min-height: 40px;
+  font-size: 10px;
 }
 
 .sharing-section {
@@ -3684,6 +3814,10 @@ h2 {
   .settlement-layout {
     grid-template-columns: 1fr;
   }
+
+  .combination-share-bar {
+    left: 238px;
+  }
 }
 
 @media (max-width: 720px) {
@@ -3927,20 +4061,44 @@ h2 {
     gap: 7px;
   }
 
-  .combination-stats div {
+  .combination-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .combination-stat,
+  .combination-stat-share {
     padding: 12px 9px;
   }
 
-  .combination-stats strong {
+  .combination-stat-share {
+    padding: 0;
+  }
+
+  .combination-stat-share .combination-stat {
+    padding: 12px 40px 12px 9px;
+  }
+
+  .combination-share-plus {
+    top: 9px;
+    right: 9px;
+    width: 25px;
+    height: 25px;
+  }
+
+  .combination-stat strong {
     font-size: 24px;
   }
 
-  .combination-stats span {
+  .combination-stat span {
     font-size: 8px;
   }
 
-  .privacy-note {
-    align-items: flex-start;
+  .combination-journal-head {
+    margin-top: 26px;
+  }
+
+  .combination-journal-head h2 {
+    font-size: 24px;
   }
 
   .combination-grid {
@@ -3954,6 +4112,24 @@ h2 {
 
   .combination-card-body h2 {
     font-size: 17px;
+  }
+
+  .combination-share-bar {
+    right: 10px;
+    bottom: 78px;
+    left: 10px;
+    padding: 10px;
+  }
+
+  .combination-share-bar > div {
+    gap: 5px;
+  }
+
+  .combination-share-bar .primary-button,
+  .combination-share-bar .secondary-button {
+    min-height: 38px;
+    padding-inline: 10px;
+    font-size: 9px;
   }
 
   .sharing-options {
