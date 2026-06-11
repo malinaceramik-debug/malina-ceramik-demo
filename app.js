@@ -509,6 +509,7 @@ function navItems() {
       { id: "home", label: "Początek", icon: "home" },
       { id: "my-items", label: "Moje wyroby", icon: "gallery" },
       { id: "combinations", label: "Moje kombinacje", icon: "palette" },
+      { id: "glazes", label: "Wspólne kombinacje", icon: "users" },
       { id: "notifications", label: "Powiadomienia", icon: "bell" },
     ];
   }
@@ -620,7 +621,8 @@ function pluralItems(count) {
 }
 
 function renderNav() {
-  const markup = navItems()
+  const items = navItems();
+  const markup = items
     .map(
       (item) => `
         <button class="nav-button ${state.view === item.id ? "active" : ""}" data-view="${item.id}" type="button">
@@ -630,12 +632,15 @@ function renderNav() {
     )
     .join("");
   const utilityItem = utilityNavItem();
-  const utilityMarkup = `
-    <div class="utility-nav-label">Biblioteka wspólna</div>
-    <button class="nav-button utility-nav-button ${state.view === utilityItem.id ? "active" : ""}" data-view="${utilityItem.id}" type="button">
-      ${icon(utilityItem.icon)}
-      <span>${utilityItem.label}</span>
-    </button>`;
+  const utilityMarkup =
+    state.role === "instructor"
+      ? `
+        <div class="utility-nav-label">Biblioteka wspólna</div>
+        <button class="nav-button utility-nav-button ${state.view === utilityItem.id ? "active" : ""}" data-view="${utilityItem.id}" type="button">
+          ${icon(utilityItem.icon)}
+          <span>${utilityItem.label}</span>
+        </button>`
+      : "";
   document.querySelector("#desktop-nav").innerHTML = markup;
   document.querySelector("#desktop-utility-nav").innerHTML = utilityMarkup;
   document.querySelector("#mobile-nav").innerHTML = markup;
