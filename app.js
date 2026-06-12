@@ -1380,7 +1380,7 @@ function itemCard(item, selectable) {
   const finalImages = normalizeFinalImages(item.finalImages);
   const cardImage = displayItemImage(item);
   return `
-    <article class="item-card firing-${item.firing} ${selected ? "selected" : ""}" data-item-id="${item.id}" data-selectable="${selectable}" role="button" tabindex="0" aria-label="${selectable ? "Zaznacz wyrób" : `Otwórz ${escapeHtml(label)}`}">
+    <article class="item-card firing-${item.firing} status-${item.status} ${selected ? "selected" : ""}" data-item-id="${item.id}" data-selectable="${selectable}" role="button" tabindex="0" aria-label="${selectable ? "Zaznacz wyrób" : `Otwórz ${escapeHtml(label)}`}">
       <div class="item-photo">
         <img src="${cardImage}" alt="${label}, wyrób: ${item.owner}" />
         ${selectable ? `<span class="select-circle" aria-hidden="true">✓</span>` : ""}

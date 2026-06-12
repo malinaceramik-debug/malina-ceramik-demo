@@ -1191,6 +1191,32 @@ h2 {
   background: #e9e2d6;
 }
 
+.gallery-grid .item-card.status-waiting .item-photo::after {
+  position: absolute;
+  z-index: 1;
+  inset: 38% 0 0;
+  content: "";
+  pointer-events: none;
+}
+
+.gallery-grid .item-card.status-waiting.firing-bisque .item-photo::after {
+  background: linear-gradient(
+    to bottom,
+    rgba(217, 191, 150, 0),
+    rgba(217, 191, 150, 0.08) 42%,
+    rgba(191, 151, 91, 0.3) 100%
+  );
+}
+
+.gallery-grid .item-card.status-waiting.firing-glaze .item-photo::after {
+  background: linear-gradient(
+    to bottom,
+    rgba(223, 128, 97, 0),
+    rgba(223, 128, 97, 0.07) 42%,
+    rgba(195, 87, 55, 0.28) 100%
+  );
+}
+
 .item-photo img {
   width: 100%;
   height: 100%;
@@ -1219,6 +1245,7 @@ h2 {
 
 .item-photo .status-pill {
   position: absolute;
+  z-index: 2;
   top: 12px;
   right: 12px;
   box-shadow: 0 4px 16px rgba(24, 22, 18, 0.1);
@@ -1226,6 +1253,7 @@ h2 {
 
 .firing-pill {
   position: absolute;
+  z-index: 2;
   bottom: 11px;
   left: 11px;
   padding: 6px 9px;
@@ -1247,6 +1275,7 @@ h2 {
 
 .final-photo-pill {
   position: absolute;
+  z-index: 2;
   right: 11px;
   bottom: 11px;
   padding: 6px 9px;
