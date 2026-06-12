@@ -714,6 +714,18 @@ function saveState() {
   scheduleRemoteSave();
 }
 
+async function saveStateImmediately() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!liveMode || !liveUser) return;
+  clearTimeout(liveSaveTimer);
+  const payload = sharedStatePayload();
+  const nextHash = sharedStateHash(payload);
+  setCloudStatus("Zapisywanie...", "syncing");
+  await liveBackend.saveStudioState(payload);
+  lastRemoteStateHash = nextHash;
+  setCloudStatus("Zapisano w chmurze", "ready");
+}
+
 function normalizeRecipe(recipe = {}) {
   return {
     clay: Array.isArray(recipe.clay) ? recipe.clay : [],
@@ -3332,7 +3344,7 @@ function renderAddFlow() {
           ? `<button class="primary-button" id="add-next" type="button" ${addFlow.photos.length ? "" : "disabled"}>Dodałem już wszystkie zdjęcia</button>`
           : ""
       }
-      ${addFlow.step === 2 ? '<button class="primary-button" id="confirm-add" type="button">Dodaj wyroby do pracowni</button>' : ""}
+      ${addFlow.step === 2 ? '<button class="primary-button" id="confirm-add" type="button">Wyślij zdjęcia</button>' : ""}
     </div>
   `;
 
@@ -3531,6 +3543,11 @@ function photoGrid(mode) {
 
 async function confirmNewItems() {
   const confirmButton = document.querySelector("#confirm-add");
+  const resetConfirmButton = () => {
+    if (!confirmButton) return;
+    confirmButton.disabled = false;
+    confirmButton.textContent = "Wyślij zdjęcia";
+  };
   if (confirmButton) {
     confirmButton.disabled = true;
     confirmButton.textContent = liveMode ? "Wysyłanie zdjęć..." : "Dodawanie...";
@@ -3547,12 +3564,12 @@ async function confirmNewItems() {
       });
     }
   } catch (error) {
-    if (confirmButton) {
-      confirmButton.disabled = false;
-      confirmButton.textContent = "Dodaj wyroby do pracowni";
-    }
-    showToast(error.message || "Nie udało się wysłać zdjęć.");
+    resetConfirmButton();
+    showToast(error.message || "Nie udało się wysłać zdjęć. Spróbuj ponownie.");
     return;
+  }
+  if (confirmButton) {
+    confirmButton.textContent = liveMode ? "Zapisywanie ceramiki..." : "Dodawanie...";
   }
   const session = currentSession();
   const ownerId =
@@ -3596,6 +3613,11 @@ async function confirmNewItems() {
       recipe: normalizeRecipe(),
     };
   });
+  const stateBeforeSave = {
+    items: structuredClone(state.items),
+    emailEvents: structuredClone(state.emailEvents || []),
+    notifications: structuredClone(state.notifications || []),
+  };
   state.items.push(...newItems);
   if (state.role === "guest") {
     state.emailEvents.unshift({
@@ -3612,7 +3634,18 @@ async function confirmNewItems() {
     body: `${owner} dodał(a) ${newItems.length} ${pluralItems(newItems.length)} do wypału.`,
     itemIds: newItems.map((item) => item.id),
   });
-  saveState();
+  try {
+    await saveStateImmediately();
+  } catch (error) {
+    state.items = stateBeforeSave.items;
+    state.emailEvents = stateBeforeSave.emailEvents;
+    state.notifications = stateBeforeSave.notifications;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    setCloudStatus("Brak synchronizacji", "error");
+    resetConfirmButton();
+    showToast(error.message || "Nie udało się zapisać ceramiki w pracowni.");
+    return;
+  }
   closeModal();
   if (state.role === "student") {
     state.studentItemsTab = "studio";
@@ -3628,7 +3661,9 @@ async function confirmNewItems() {
   showToast(
     state.role === "guest"
       ? `${newItems.length} ${pluralItems(newItems.length)} dodano. Potwierdzenie e-mail jest gotowe.`
-      : `${newItems.length} ${pluralItems(newItems.length)} dodano do jednej dostawy.`,
+      : newItems.length === 1
+        ? "Ceramika została dodana do pracowni."
+        : `${newItems.length} wyroby zostały dodane do pracowni.`,
   );
 }
 

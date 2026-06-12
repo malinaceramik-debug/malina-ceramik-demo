@@ -136,10 +136,26 @@ export const liveBackend = {
       `${Date.now()}-${crypto.randomUUID()}-${cleanFileName(file.name || `zdjecie.${extension}`)}`,
     ].join("/");
     const reference = api.storageSdk.ref(api.storage, path);
-    await api.storageSdk.uploadBytes(reference, file, {
-      contentType: file.type || "image/jpeg",
-      cacheControl: "public,max-age=31536000,immutable",
-    });
+    try {
+      await api.storageSdk.uploadBytes(reference, file, {
+        contentType: file.type || "image/jpeg",
+        cacheControl: "public,max-age=31536000,immutable",
+      });
+    } catch (error) {
+      if (
+        ["storage/unknown", "storage/bucket-not-found", "storage/retry-limit-exceeded"].includes(
+          error?.code,
+        )
+      ) {
+        throw new Error(
+          "Magazyn zdjęć nie jest jeszcze aktywny. Uruchom Firebase Storage i spróbuj ponownie.",
+        );
+      }
+      if (error?.code === "storage/unauthorized") {
+        throw new Error("To konto nie ma uprawnień do wysyłania zdjęć.");
+      }
+      throw error;
+    }
     return api.storageSdk.getDownloadURL(reference);
   },
 
