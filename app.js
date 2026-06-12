@@ -342,6 +342,8 @@ let state = loadState();
 let addFlow = {
   step: 1,
   photos: [],
+  ownerSelection: "",
+  newOwnerName: "",
 };
 let recipeDraft = null;
 let finalPhotoTargetId = null;
@@ -1981,6 +1983,7 @@ function instructorGallerySections(items) {
 }
 
 function settlementsView() {
+  const clients = studioClients();
   return `
     <div class="page-head">
       <div>
@@ -1994,9 +1997,12 @@ function settlementsView() {
         <div class="field">
           <label for="settlement-client">Kursant</label>
           <select class="select" id="settlement-client">
-            <option>Anna Kowalska</option>
-            <option>Marek Piotrowski</option>
-            <option>Zofia Malinowska</option>
+            ${clients
+              .map(
+                (client) =>
+                  `<option value="${escapeHtml(client.name)}">${escapeHtml(client.name)}</option>`,
+              )
+              .join("")}
           </select>
         </div>
         <div class="weight-row">
@@ -2051,11 +2057,7 @@ function historyRow(payment) {
 }
 
 function clientsView() {
-  const clients = [
-    ["Anna Kowalska", "anna"],
-    ["Marek Piotrowski", "marek"],
-    ["Zofia Malinowska", "zofia"],
-  ];
+  const clients = studioClients();
   return `
     <div class="page-head">
       <div>
@@ -2066,21 +2068,42 @@ function clientsView() {
     </div>
     <section class="panel">
       <div class="history-list">
-        ${clients
-          .map(([name, id]) => {
-            const items = state.items.filter((item) => !item.personalJournal && item.ownerId === id);
-            const waiting = items.filter((item) => item.status === "waiting").length;
-            return `
-              <div class="history-row">
-                <div class="avatar">${name.split(" ").map((part) => part[0]).join("")}</div>
-                <div><strong>${name}</strong><small>${items.length} ${pluralItems(items.length)} · ${waiting} czeka na wypał</small></div>
-                <button class="ghost-button client-filter" data-client="${name}" type="button">Pokaż wyroby →</button>
-              </div>`;
-          })
-          .join("")}
+        ${
+          clients.length
+            ? clients
+                .map(({ name, id }) => {
+                  const items = state.items.filter(
+                    (item) => !item.personalJournal && item.ownerId === id,
+                  );
+                  const waiting = items.filter(
+                    (item) => item.status === "waiting",
+                  ).length;
+                  return `
+                    <div class="history-row">
+                      <div class="avatar">${escapeHtml(name.split(" ").map((part) => part[0]).join(""))}</div>
+                      <div><strong>${escapeHtml(name)}</strong><small>${items.length} ${pluralItems(items.length)} · ${waiting} czeka na wypał</small></div>
+                      <button class="ghost-button client-filter" data-client="${escapeHtml(name)}" type="button">Pokaż wyroby →</button>
+                    </div>`;
+                })
+                .join("")
+            : emptyState("Brak kursantów", "Pierwsza osoba pojawi się tu po dodaniu jej ceramiki.")
+        }
       </div>
     </section>
   `;
+}
+
+function studioClients() {
+  const clients = new Map();
+  state.items
+    .filter((item) => !item.personalJournal && item.ownerType !== "instructor")
+    .filter((item) => item.ownerId && item.ownerId !== currentInstructorId())
+    .forEach((item) => {
+      if (!clients.has(item.ownerId)) {
+        clients.set(item.ownerId, { id: item.ownerId, name: item.owner });
+      }
+    });
+  return [...clients.values()].sort((a, b) => a.name.localeCompare(b.name, "pl"));
 }
 
 function instructorArchive() {
@@ -3454,6 +3477,8 @@ function openAddFlow() {
   addFlow = {
     step: 1,
     photos: [],
+    ownerSelection: state.role === "instructor" ? "" : "current",
+    newOwnerName: "",
   };
   renderAddFlow();
   openModal();
@@ -3481,7 +3506,7 @@ function renderAddFlow() {
       ${addFlow.step > 1 ? '<button class="secondary-button" id="add-back" type="button">Wstecz</button>' : "<span></span>"}
       ${
         addFlow.step === 1
-          ? `<button class="primary-button" id="add-next" type="button" ${addFlow.photos.length ? "" : "disabled"}>Dodałem już wszystkie zdjęcia</button>`
+          ? `<button class="primary-button" id="add-next" type="button" ${addFlow.photos.length && addFlowOwnerReady() ? "" : "disabled"}>Dodałem już wszystkie zdjęcia</button>`
           : ""
       }
       ${addFlow.step === 2 ? '<button class="primary-button" id="confirm-add" type="button">Wyślij zdjęcia</button>' : ""}
@@ -3494,6 +3519,10 @@ function renderAddFlow() {
     renderAddFlow();
   });
   modal.querySelector("#add-next")?.addEventListener("click", () => {
+    if (!addFlowOwnerReady()) {
+      showToast("Wybierz właściciela ceramiki.");
+      return;
+    }
     addFlow.step += 1;
     renderAddFlow();
   });
@@ -3524,6 +3553,15 @@ function renderAddFlow() {
   modal.querySelector("#upload-zone")?.addEventListener("click", () => {
     openPhotoSourcePicker("photo-input", "photo-camera-input");
   });
+  modal.querySelector("#add-owner")?.addEventListener("change", (event) => {
+    addFlow.ownerSelection = event.target.value;
+    addFlow.newOwnerName = "";
+    renderAddFlow();
+  });
+  modal.querySelector("#new-owner-name")?.addEventListener("input", (event) => {
+    addFlow.newOwnerName = event.target.value;
+    updateAddFlowNextState();
+  });
 
   modal.querySelectorAll("[data-demo-image]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -3549,6 +3587,7 @@ function addFlowStepDescription() {
 function addFlowBody() {
   if (addFlow.step === 1) {
     return `
+      ${instructorOwnerPicker()}
       <button class="upload-zone" id="upload-zone" type="button">
         <span>
           <span class="camera-symbol">${icons.camera}</span>
@@ -3609,6 +3648,84 @@ function addFlowBody() {
       <span><i class="summary-dot glaze"></i>Na ostro: <strong>${glazeCount}</strong></span>
     </div>
   `;
+}
+
+function instructorOwnerPicker() {
+  if (state.role !== "instructor") return "";
+  const clients = studioClients();
+  return `
+    <section class="add-owner-picker">
+      <label class="field" for="add-owner">
+        <span>Właściciel ceramiki</span>
+        <select class="select" id="add-owner">
+          <option value="">Wybierz kursanta</option>
+          ${clients
+            .map(
+              (client) =>
+                `<option value="${escapeHtml(client.id)}" ${addFlow.ownerSelection === client.id ? "selected" : ""}>${escapeHtml(client.name)}</option>`,
+            )
+            .join("")}
+          <option value="__new__" ${addFlow.ownerSelection === "__new__" ? "selected" : ""}>+ Nowy kursant</option>
+          <option value="__self__" ${addFlow.ownerSelection === "__self__" ? "selected" : ""}>Moja ceramika</option>
+        </select>
+      </label>
+      ${
+        addFlow.ownerSelection === "__new__"
+          ? `<label class="field" for="new-owner-name">
+              <span>Imię i nazwisko kursanta</span>
+              <input class="input" id="new-owner-name" type="text" autocomplete="off" placeholder="np. Anna Kowalska" value="${escapeHtml(addFlow.newOwnerName)}" />
+            </label>`
+          : ""
+      }
+    </section>`;
+}
+
+function addFlowOwnerReady() {
+  if (state.role !== "instructor") return true;
+  if (addFlow.ownerSelection === "__new__") {
+    return addFlow.newOwnerName.trim().length >= 2;
+  }
+  return Boolean(addFlow.ownerSelection);
+}
+
+function updateAddFlowNextState() {
+  const button = document.querySelector("#add-next");
+  if (button) button.disabled = !addFlow.photos.length || !addFlowOwnerReady();
+}
+
+function resolveAddFlowOwner() {
+  const session = currentSession();
+  if (state.role === "student") {
+    return { id: "anna", name: "Anna Kowalska", type: "client" };
+  }
+  if (state.role === "guest") {
+    return { id: session.ownerId, name: session.email, type: "guest" };
+  }
+  if (addFlow.ownerSelection === "__self__") {
+    return {
+      id: currentInstructorId(),
+      name: currentInstructorName(),
+      type: "instructor",
+    };
+  }
+  if (addFlow.ownerSelection === "__new__") {
+    const name = addFlow.newOwnerName.trim().replace(/\s+/g, " ");
+    if (name.length < 2) return null;
+    const existing = studioClients().find(
+      (client) => client.name.toLocaleLowerCase("pl") === name.toLocaleLowerCase("pl"),
+    );
+    return existing
+      ? { ...existing, type: "client" }
+      : {
+          id: `client-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+          name,
+          type: "client",
+        };
+  }
+  const client = studioClients().find(
+    (candidate) => candidate.id === addFlow.ownerSelection,
+  );
+  return client ? { ...client, type: "client" } : null;
 }
 
 function addPhoto(image, file = null) {
@@ -3686,6 +3803,11 @@ function photoGrid(mode) {
 }
 
 async function confirmNewItems() {
+  const selectedOwner = resolveAddFlowOwner();
+  if (!selectedOwner) {
+    showToast("Wybierz właściciela ceramiki.");
+    return;
+  }
   const confirmButton = document.querySelector("#confirm-add");
   const resetConfirmButton = () => {
     if (!confirmButton) return;
@@ -3715,19 +3837,8 @@ async function confirmNewItems() {
   if (confirmButton) {
     confirmButton.textContent = liveMode ? "Zapisywanie ceramiki..." : "Dodawanie...";
   }
-  const session = currentSession();
-  const ownerId =
-    state.role === "student"
-      ? "anna"
-      : state.role === "instructor"
-        ? currentInstructorId()
-        : session.ownerId;
-  const owner =
-    state.role === "student"
-      ? "Anna Kowalska"
-      : state.role === "instructor"
-        ? currentInstructorName()
-        : session.email;
+  const ownerId = selectedOwner.id;
+  const owner = selectedOwner.name;
   let nextId = liveMode
     ? Date.now()
     : state.role === "student"
@@ -3741,7 +3852,8 @@ async function confirmNewItems() {
       code: `MC-${String(id).padStart(4, "0")}`,
       owner,
       ownerId,
-      ownerEmail: state.role === "guest" ? session.email : undefined,
+      ownerType: selectedOwner.type,
+      ownerEmail: state.role === "guest" ? currentSession().email : undefined,
       image: photo.image,
       status: "waiting",
       firing: photo.firing,
@@ -3749,7 +3861,10 @@ async function confirmNewItems() {
         state.role === "student"
           ? "Dostawa 09.06"
           : state.role === "instructor"
-            ? "Dostawa instruktora 11.06"
+            ? `Dostawa ${new Intl.DateTimeFormat("pl-PL", {
+                day: "2-digit",
+                month: "2-digit",
+              }).format(new Date())}`
             : "Wypał gościnny 11.06",
       date: liveMode ? today : state.role === "student" ? "2026-06-09" : "2026-06-11",
       finalImages: [],
@@ -3796,8 +3911,14 @@ async function confirmNewItems() {
     state.studentFilter = "all";
     state.view = "my-items";
   } else if (state.role === "instructor") {
-    state.instructorPersonalFilter = "all";
-    state.view = "journal";
+    if (selectedOwner.type === "instructor") {
+      state.instructorPersonalFilter = "all";
+      state.view = "journal";
+    } else {
+      state.instructorStatus = "all";
+      state.instructorFiring = "all";
+      state.view = "gallery";
+    }
   } else {
     state.view = "guest-items";
   }

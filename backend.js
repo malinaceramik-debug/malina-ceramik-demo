@@ -52,6 +52,14 @@ function studioStateReference(api) {
   return api.firestoreSdk.doc(api.db, "studios", livePilotConfig.studioId);
 }
 
+function instructorAccessReference(api) {
+  return api.firestoreSdk.doc(api.db, "access", "instructors");
+}
+
+function normalizedInstructorEmails(emails = []) {
+  return [...new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean))];
+}
+
 function cleanFileName(name = "zdjecie.jpg") {
   return name
     .normalize("NFD")
@@ -82,12 +90,37 @@ export const liveBackend = {
   async signIn(email, password) {
     const api = await services();
     const credential = await api.authSdk.signInWithEmailAndPassword(api.auth, email, password);
-    if (
-      livePilotConfig.instructorEmails?.length &&
-      !livePilotConfig.instructorEmails.includes(credential.user.email?.toLowerCase())
-    ) {
+    const signedInEmail = credential.user.email?.toLowerCase() || "";
+    const bootstrapEmails = normalizedInstructorEmails(livePilotConfig.instructorEmails);
+    let hasAccess = bootstrapEmails.includes(signedInEmail);
+    try {
+      const accessSnapshot = await api.firestoreSdk.getDoc(instructorAccessReference(api));
+      const configuredEmails = normalizedInstructorEmails(accessSnapshot.data()?.emails);
+      hasAccess ||= configuredEmails.includes(signedInEmail);
+      if (signedInEmail === livePilotConfig.primaryInstructorEmail) {
+        const mergedEmails = normalizedInstructorEmails([
+          ...configuredEmails,
+          ...bootstrapEmails,
+        ]);
+        await api.firestoreSdk.setDoc(
+          instructorAccessReference(api),
+          {
+            emails: mergedEmails,
+            updatedAt: api.firestoreSdk.serverTimestamp(),
+            updatedBy: credential.user.uid,
+          },
+          { merge: true },
+        );
+      }
+    } catch (error) {
+      if (!hasAccess) {
+        await api.authSdk.signOut(api.auth);
+        throw new Error("To konto nie ma dostępu instruktorskiego.");
+      }
+    }
+    if (!hasAccess) {
       await api.authSdk.signOut(api.auth);
-      throw new Error("To konto nie ma dostępu do pilotażu instruktorskiego.");
+      throw new Error("To konto nie ma dostępu instruktorskiego.");
     }
     return credential;
   },

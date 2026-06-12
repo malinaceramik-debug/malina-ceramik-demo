@@ -2,11 +2,43 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function instructor() {
+    function signedInEmail() {
       return request.auth != null
+        && request.auth.token.email != null;
+    }
+
+    function primaryInstructor() {
+      return signedInEmail()
+        && request.auth.token.email == "malinaceramik@gmail.com";
+    }
+
+    function bootstrapInstructor() {
+      return signedInEmail()
         && request.auth.token.email in [
-          "malinaceramik@gmail.com"
+          "malinaceramik@gmail.com",
+          "justyna.rusinek.studio@gmail.com",
+          "paulina.a.bafia@gmail.com",
+          "nataliatomecka04@gmail.com",
+          "aleksandramyszkowiak@gmail.com",
+          "kivachuk.polina@gmail.com"
         ];
+    }
+
+    function configuredInstructor() {
+      return signedInEmail()
+        && exists(/databases/$(database)/documents/access/instructors)
+        && request.auth.token.email
+          in get(/databases/$(database)/documents/access/instructors).data.emails;
+    }
+
+    function instructor() {
+      return bootstrapInstructor() || configuredInstructor();
+    }
+
+    match /access/instructors {
+      allow read: if bootstrapInstructor()
+        || (signedInEmail() && request.auth.token.email in resource.data.emails);
+      allow create, update, delete: if primaryInstructor();
     }
 
     match /studios/{studioId} {

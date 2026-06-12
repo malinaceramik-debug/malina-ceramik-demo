@@ -2,11 +2,32 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    function instructor() {
+    function signedInEmail() {
       return request.auth != null
+        && request.auth.token.email != null;
+    }
+
+    function bootstrapInstructor() {
+      return signedInEmail()
         && request.auth.token.email in [
-          "malinaceramik@gmail.com"
+          "malinaceramik@gmail.com",
+          "justyna.rusinek.studio@gmail.com",
+          "paulina.a.bafia@gmail.com",
+          "nataliatomecka04@gmail.com",
+          "aleksandramyszkowiak@gmail.com",
+          "kivachuk.polina@gmail.com"
         ];
+    }
+
+    function configuredInstructor() {
+      return signedInEmail()
+        && firestore.exists(/databases/(default)/documents/access/instructors)
+        && request.auth.token.email
+          in firestore.get(/databases/(default)/documents/access/instructors).data.emails;
+    }
+
+    function instructor() {
+      return bootstrapInstructor() || configuredInstructor();
     }
 
     match /studios/{studioId}/users/{userId}/{allPaths=**} {

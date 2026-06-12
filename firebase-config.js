@@ -11,5 +11,13 @@ export const livePilotConfig = {
   enabled: true,
   studioId: "malina-main",
   vapidKey: "",
-  instructorEmails: ["malinaceramik@gmail.com"],
+  primaryInstructorEmail: "malinaceramik@gmail.com",
+  instructorEmails: [
+    "malinaceramik@gmail.com",
+    "justyna.rusinek.studio@gmail.com",
+    "paulina.a.bafia@gmail.com",
+    "nataliatomecka04@gmail.com",
+    "aleksandramyszkowiak@gmail.com",
+    "kivachuk.polina@gmail.com",
+  ],
 };
