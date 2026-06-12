@@ -159,6 +159,35 @@ export const liveBackend = {
     return api.storageSdk.getDownloadURL(reference);
   },
 
+  async deleteImages(urls = []) {
+    const api = await services();
+    const user = api.auth.currentUser;
+    if (!user) throw new Error("Zaloguj się ponownie przed usunięciem zdjęć.");
+    const storageUrls = [...new Set(urls)].filter(
+      (url) =>
+        typeof url === "string" &&
+        (url.startsWith("gs://") ||
+          url.startsWith("https://firebasestorage.googleapis.com/") ||
+          url.includes(".firebasestorage.app/")),
+    );
+    const results = await Promise.allSettled(
+      storageUrls.map((url) => {
+        const encodedPath = url.match(/\/o\/([^?]+)/)?.[1];
+        const reference =
+          encodedPath && !url.startsWith("gs://")
+            ? api.storageSdk.ref(api.storage, decodeURIComponent(encodedPath))
+            : api.storageSdk.ref(api.storage, url);
+        return api.storageSdk.deleteObject(reference);
+      }),
+    );
+    const failed = results.find(
+      (result) =>
+        result.status === "rejected" &&
+        result.reason?.code !== "storage/object-not-found",
+    );
+    if (failed) throw failed.reason;
+  },
+
   async publishNotification(notification) {
     const api = await services();
     const user = api.auth.currentUser;

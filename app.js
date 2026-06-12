@@ -865,6 +865,10 @@ function canEditItem(item) {
   return isOwnItem(item) && state.role !== "guest";
 }
 
+function canDeleteItem(item) {
+  return state.role === "instructor" || canEditItem(item);
+}
+
 function firingLegend() {
   return `
     <div class="firing-legend" aria-label="Kolory rodzaju wypalu">
@@ -1056,7 +1060,7 @@ function guestEmailMessage(event) {
       ${icon("bell")}
       <div>
         <strong>${fired ? "Ceramika została wypalona" : "Ceramika została dodana"}</strong>
-        <span>Demo wiadomości wysłanej na ${escapeHtml(event.email)}.</span>
+        <span>Powiadomienie przygotowane dla ${escapeHtml(event.email)}.</span>
       </div>
     </div>
   `;
@@ -2422,6 +2426,7 @@ function openItemPreview(itemId) {
   const item = state.items.find((candidate) => candidate.id === itemId);
   if (!item) return;
   const editable = canEditItem(item);
+  const deletable = canDeleteItem(item);
   const isStudentItem = isOwnItem(item) && !item.personalJournal;
   const isJournalItem = state.role === "instructor" && item.personalJournal;
   const isPersonalEntry = item.personalJournal && editable;
@@ -2479,6 +2484,7 @@ function openItemPreview(itemId) {
       ${(isStudentItem || isJournalItem) && editable ? sharingSection(item) : ""}
     </div>
     <div class="modal-foot preview-modal-foot">
+      ${deletable ? '<button class="danger-button preview-delete-button" id="delete-item" type="button">Usuń wyrób</button>' : ""}
       <button class="secondary-button close-modal" type="button">Zamknij podgląd</button>
       ${isPersonalEntry && item.journalStage !== "finished" ? '<button class="secondary-button" id="mark-journal-finished" type="button">Oznacz jako gotowy</button>' : ""}
       ${editable ? '<button class="primary-button" id="save-inline-recipe" type="button">Zapisz notatkę</button>' : ""}
@@ -2506,6 +2512,9 @@ function openItemPreview(itemId) {
   });
   modal.querySelectorAll("[data-demo-final-image]").forEach((button) => {
     button.addEventListener("click", () => addFinalImages(itemId, [button.dataset.demoFinalImage]));
+  });
+  modal.querySelector("#delete-item")?.addEventListener("click", () => {
+    openDeleteItemConfirmation(itemId);
   });
   attachInlineRecipeListeners(item);
   attachPreviewSwipe(itemId, previousItem?.id, nextItem?.id, canNavigate);
@@ -2598,6 +2607,7 @@ function previewPhotoDock(item, canAddFinal) {
 }
 
 function previewDemoPhotoButtons() {
+  if (liveMode) return "";
   return `
     <div class="preview-demo-photos" aria-label="Przykładowe zdjęcia w wersji demo">
       ${["kubek", "miska", "talerz", "wazon"]
@@ -2680,15 +2690,19 @@ function finalEffectSection(item, canAddFinal) {
         canAddFinal
           ? `<div class="final-photo-actions">
               <button class="secondary-button" id="add-final-photo" type="button">${finalImages.length ? "Dodaj kolejne zdjęcie efektu" : "Dodaj zdjęcie po wypale"}</button>
-              <div class="demo-final-row" aria-label="Przykładowe zdjęcia w wersji demo">
-                <span>Demo:</span>
-                ${["kubek", "miska", "talerz", "wazon"]
-                  .map(
-                    (name) =>
-                      `<button data-demo-final-image="assets/${name}.webp" type="button" aria-label="Dodaj finalne zdjęcie: ${name}"><img src="assets/${name}.webp" alt="" /></button>`,
-                  )
-                  .join("")}
-              </div>
+              ${
+                liveMode
+                  ? ""
+                  : `<div class="demo-final-row" aria-label="Przykładowe zdjęcia w wersji demo">
+                      <span>Demo:</span>
+                      ${["kubek", "miska", "talerz", "wazon"]
+                        .map(
+                          (name) =>
+                            `<button data-demo-final-image="assets/${name}.webp" type="button" aria-label="Dodaj finalne zdjęcie: ${name}"><img src="assets/${name}.webp" alt="" /></button>`,
+                        )
+                        .join("")}
+                    </div>`
+              }
             </div>`
           : `<p class="final-effect-hint">${
               item.status === "waiting" && !item.personalJournal
@@ -2745,6 +2759,109 @@ function removeFinalImage(itemId, imageId) {
   saveState();
   openItemPreview(itemId);
   showToast("Zdjęcie finalnego efektu zostało usunięte.");
+}
+
+function openDeleteItemConfirmation(itemId) {
+  const item = state.items.find((candidate) => candidate.id === itemId);
+  if (!item || !canDeleteItem(item)) return;
+  const modal = document.querySelector("#modal");
+  modal.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">Usuwanie wyrobu</p>
+        <h2 id="modal-title">Usunąć ${escapeHtml(visibleItemLabel(item))}?</h2>
+        <p>Wyrób i jego zdjęcia znikną z aplikacji.</p>
+      </div>
+      <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
+    </div>
+    <div class="modal-body delete-item-confirmation">
+      <img src="${displayItemImage(item)}" alt="" />
+      <div>
+        <strong>${escapeHtml(item.owner)}</strong>
+        <span>${firingLabel(item.firing)} · ${statusLabel(item.status)}</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="secondary-button" id="cancel-delete-item" type="button">Anuluj</button>
+      <button class="danger-button" id="confirm-delete-item" type="button">Usuń wyrób</button>
+    </div>`;
+  modal.querySelector(".close-modal").addEventListener("click", closeModal);
+  modal.querySelector("#cancel-delete-item").addEventListener("click", () => {
+    openItemPreview(itemId);
+  });
+  modal.querySelector("#confirm-delete-item").addEventListener("click", () => {
+    deleteItem(itemId);
+  });
+}
+
+function removeItemReferences(entries, itemId) {
+  return (entries || [])
+    .filter(
+      (entry) =>
+        !Array.isArray(entry.itemIds) ||
+        entry.itemIds.some((candidate) => candidate !== itemId),
+    )
+    .map((entry) =>
+      Array.isArray(entry.itemIds)
+        ? {
+            ...entry,
+            itemIds: entry.itemIds.filter((candidate) => candidate !== itemId),
+          }
+        : entry,
+    );
+}
+
+async function deleteItem(itemId) {
+  const item = state.items.find((candidate) => candidate.id === itemId);
+  if (!item || !canDeleteItem(item)) return;
+  const button = document.querySelector("#confirm-delete-item");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Usuwanie...";
+  }
+  const previousState = {
+    items: structuredClone(state.items),
+    emailEvents: structuredClone(state.emailEvents || []),
+    notifications: structuredClone(state.notifications || []),
+    selected: [...state.selected],
+    shareSelection: [...combinationShareSelection],
+  };
+  const imageUrls = [
+    item.image,
+    ...normalizeFinalImages(item.finalImages).map((entry) => entry.image),
+  ];
+  state.items = state.items.filter((candidate) => candidate.id !== itemId);
+  state.emailEvents = removeItemReferences(state.emailEvents, itemId);
+  state.notifications = removeItemReferences(state.notifications, itemId);
+  state.selected = state.selected.filter((candidate) => candidate !== itemId);
+  combinationShareSelection = combinationShareSelection.filter(
+    (candidate) => candidate !== itemId,
+  );
+  try {
+    await saveStateImmediately();
+  } catch (error) {
+    state.items = previousState.items;
+    state.emailEvents = previousState.emailEvents;
+    state.notifications = previousState.notifications;
+    state.selected = previousState.selected;
+    combinationShareSelection = previousState.shareSelection;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    setCloudStatus("Brak synchronizacji", "error");
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Usuń wyrób";
+    }
+    showToast(error.message || "Nie udało się usunąć wyrobu.");
+    return;
+  }
+  closeModal();
+  render();
+  try {
+    if (liveMode) await liveBackend.deleteImages(imageUrls);
+    showToast("Wyrób został usunięty.");
+  } catch {
+    showToast("Wyrób usunięto. Nie udało się usunąć jednego ze zdjęć z magazynu.");
+  }
 }
 
 function recipeSummary(item) {
@@ -3210,15 +3327,19 @@ function renderJournalFlow() {
               : `<span class="camera-symbol">${icons.camera}</span><strong>Zrób lub dodaj zdjęcie</strong>`
           }
         </button>
-        <div class="demo-final-row journal-demo-row">
-          <span>Demo:</span>
-          ${["kubek", "miska", "talerz", "wazon"]
-            .map(
-              (name) =>
-                `<button data-journal-demo-image="assets/${name}.webp" type="button" aria-label="Wybierz zdjęcie do dziennika: ${name}"><img src="assets/${name}.webp" alt="" /></button>`,
-            )
-            .join("")}
-        </div>
+        ${
+          liveMode
+            ? ""
+            : `<div class="demo-final-row journal-demo-row">
+                <span>Demo:</span>
+                ${["kubek", "miska", "talerz", "wazon"]
+                  .map(
+                    (name) =>
+                      `<button data-journal-demo-image="assets/${name}.webp" type="button" aria-label="Wybierz zdjęcie do dziennika: ${name}"><img src="assets/${name}.webp" alt="" /></button>`,
+                  )
+                  .join("")}
+              </div>`
+        }
       </div>
       <fieldset class="journal-choice">
         <legend>Na jakim jest etapie?</legend>
@@ -3435,20 +3556,24 @@ function addFlowBody() {
           <small>Jeżeli Ty nie poznajesz swojego wyrobu na zdjęciu, my też go później nie poznamy.</small>
         </span>
       </button>
-      <p class="demo-label">W wersji demonstracyjnej dodaj przykładowy wyrób:</p>
-      <div class="demo-photo-row">
-        ${[
-          ["wazon", "Wazon"],
-          ["kubek", "Kubek"],
-          ["miska", "Miska"],
-          ["talerz", "Talerz"],
-        ]
-          .map(
-            ([file, name]) =>
-              `<button class="demo-photo" data-demo-image="assets/${file}.webp" data-demo-name="${name}" type="button" aria-label="Dodaj zdjęcie: ${file}"><img src="assets/${file}.webp" alt="" /></button>`,
-          )
-          .join("")}
-      </div>
+      ${
+        liveMode
+          ? ""
+          : `<p class="demo-label">W wersji demonstracyjnej dodaj przykładowy wyrób:</p>
+             <div class="demo-photo-row">
+               ${[
+                 ["wazon", "Wazon"],
+                 ["kubek", "Kubek"],
+                 ["miska", "Miska"],
+                 ["talerz", "Talerz"],
+               ]
+                 .map(
+                   ([file, name]) =>
+                     `<button class="demo-photo" data-demo-image="assets/${file}.webp" data-demo-name="${name}" type="button" aria-label="Dodaj zdjęcie: ${file}"><img src="assets/${file}.webp" alt="" /></button>`,
+                 )
+                 .join("")}
+             </div>`
+      }
       ${
         addFlow.photos.length
           ? `

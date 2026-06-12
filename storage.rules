@@ -11,10 +11,11 @@ service firebase.storage {
 
     match /studios/{studioId}/users/{userId}/{allPaths=**} {
       allow read: if instructor();
-      allow write: if instructor()
+      allow create, update: if instructor()
         && request.auth.uid == userId
         && request.resource.size < 12 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
+      allow delete: if instructor();
     }
   }
 }

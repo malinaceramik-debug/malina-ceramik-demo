@@ -1805,6 +1805,35 @@ h2 {
   justify-content: flex-end;
 }
 
+.preview-delete-button {
+  margin-right: auto;
+}
+
+.delete-item-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.delete-item-confirmation img {
+  width: 88px;
+  height: 88px;
+  flex: 0 0 auto;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.delete-item-confirmation strong,
+.delete-item-confirmation span {
+  display: block;
+}
+
+.delete-item-confirmation span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .student-item-intro strong,
 .student-item-intro span {
   display: block;
@@ -5224,11 +5253,22 @@ h2 {
 
   .preview-modal-foot {
     align-items: stretch;
+    flex-wrap: wrap;
   }
 
   .preview-modal-foot .secondary-button,
-  .preview-modal-foot .primary-button {
+  .preview-modal-foot .primary-button,
+  .preview-modal-foot .danger-button {
     flex: 1;
+  }
+
+  .preview-delete-button {
+    margin-right: 0;
+    flex: 0 0 100% !important;
+    order: 2;
+    min-height: 42px;
+    color: #8b4035;
+    background: #fff8f5;
   }
 
   .recipe-category legend {
