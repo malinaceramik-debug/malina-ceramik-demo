@@ -2468,7 +2468,7 @@ function openItemPreview(itemId) {
   });
   modal.querySelector("#add-final-photo")?.addEventListener("click", () => {
     finalPhotoTargetId = itemId;
-    document.querySelector("#final-photo-input").click();
+    openPhotoSourcePicker("final-photo-input", "final-photo-camera-input");
   });
   modal.querySelectorAll("[data-preview-image]").forEach((button) => {
     button.addEventListener("click", () => selectPreviewImage(button.dataset.previewImage, button));
@@ -3215,7 +3215,7 @@ function renderJournalFlow() {
   });
   modal.querySelector("#journal-upload").addEventListener("click", () => {
     journalDraft.title = modal.querySelector("#journal-title").value;
-    document.querySelector("#journal-photo-input").click();
+    openPhotoSourcePicker("journal-photo-input", "journal-photo-camera-input");
   });
   modal.querySelectorAll("[data-journal-demo-image]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -3370,7 +3370,7 @@ function renderAddFlow() {
   });
 
   modal.querySelector("#upload-zone")?.addEventListener("click", () => {
-    document.querySelector("#photo-input").click();
+    openPhotoSourcePicker("photo-input", "photo-camera-input");
   });
 
   modal.querySelectorAll("[data-demo-image]").forEach((button) => {
@@ -3740,8 +3740,45 @@ function openModal() {
 }
 
 function closeModal() {
+  closePhotoSourcePicker();
   document.querySelector("#modal-backdrop").classList.add("hidden");
   document.body.style.overflow = "";
+}
+
+function openPhotoSourcePicker(galleryInputId, cameraInputId) {
+  closePhotoSourcePicker();
+  const picker = document.createElement("div");
+  picker.className = "photo-source-backdrop";
+  picker.id = "photo-source-picker";
+  picker.innerHTML = `
+    <div class="photo-source-sheet" role="dialog" aria-modal="true" aria-label="Dodaj zdjęcie">
+      <button data-photo-input="${cameraInputId}" type="button">
+        <span class="photo-source-icon">${icons.camera}</span>
+        <strong>Zrób zdjęcie</strong>
+      </button>
+      <button data-photo-input="${galleryInputId}" type="button">
+        <span class="photo-source-icon">${icons.gallery}</span>
+        <strong>Wybierz z galerii</strong>
+      </button>
+      <button class="photo-source-cancel" type="button">Anuluj</button>
+    </div>`;
+  picker.addEventListener("click", (event) => {
+    const sourceButton = event.target.closest("[data-photo-input]");
+    if (sourceButton) {
+      const input = document.querySelector(`#${sourceButton.dataset.photoInput}`);
+      closePhotoSourcePicker();
+      input.click();
+      return;
+    }
+    if (event.target === picker || event.target.closest(".photo-source-cancel")) {
+      closePhotoSourcePicker();
+    }
+  });
+  document.body.append(picker);
+}
+
+function closePhotoSourcePicker() {
+  document.querySelector("#photo-source-picker")?.remove();
 }
 
 function showToast(message) {
@@ -3865,12 +3902,16 @@ document.querySelector("#modal-backdrop").addEventListener("click", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    if (document.querySelector("#photo-source-picker")) {
+      closePhotoSourcePicker();
+      return;
+    }
     closeModal();
     document.querySelector("#profile-menu").classList.add("hidden");
   }
 });
 
-document.querySelector("#photo-input").addEventListener("change", async (event) => {
+async function handlePhotoInput(event) {
   const files = [...event.target.files];
   if (!files.length) return;
   try {
@@ -3881,9 +3922,9 @@ document.querySelector("#photo-input").addEventListener("change", async (event) 
     showToast("Nie udało się odczytać jednego ze zdjęć.");
   }
   event.target.value = "";
-});
+}
 
-document.querySelector("#final-photo-input").addEventListener("change", async (event) => {
+async function handleFinalPhotoInput(event) {
   const files = [...event.target.files];
   const itemId = finalPhotoTargetId;
   if (!files.length || !itemId) return;
@@ -3895,9 +3936,9 @@ document.querySelector("#final-photo-input").addEventListener("change", async (e
     showToast(error.message || "Nie udało się wysłać zdjęć.");
   }
   event.target.value = "";
-});
+}
 
-document.querySelector("#journal-photo-input").addEventListener("change", async (event) => {
+async function handleJournalPhotoInput(event) {
   const [file] = [...event.target.files];
   if (!file || !journalDraft) return;
   try {
@@ -3909,6 +3950,18 @@ document.querySelector("#journal-photo-input").addEventListener("change", async 
     showToast("Nie udało się przygotować zdjęcia.");
   }
   event.target.value = "";
+}
+
+["photo-input", "photo-camera-input"].forEach((id) => {
+  document.querySelector(`#${id}`).addEventListener("change", handlePhotoInput);
+});
+
+["final-photo-input", "final-photo-camera-input"].forEach((id) => {
+  document.querySelector(`#${id}`).addEventListener("change", handleFinalPhotoInput);
+});
+
+["journal-photo-input", "journal-photo-camera-input"].forEach((id) => {
+  document.querySelector(`#${id}`).addEventListener("change", handleJournalPhotoInput);
 });
 
 async function bootstrapApplication() {
