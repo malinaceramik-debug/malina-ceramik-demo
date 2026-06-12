@@ -24,7 +24,7 @@ const icons = {
   users: `<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-5 3-8 7-8s7 3 7 8"/><path d="M16 4a4 4 0 0 1 0 8M17 14c3 .7 5 3 5 7"/></svg>`,
   camera: `<svg viewBox="0 0 24 24"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/></svg>`,
   palette: `<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18h1.4a1.6 1.6 0 0 0 0-3.2h-1a1.5 1.5 0 0 1 0-3h2.8A5.8 5.8 0 0 0 21 9c0-3.3-4-6-9-6Z"/><circle cx="7.5" cy="10" r="1"/><circle cx="10" cy="6.8" r="1"/><circle cx="15" cy="7" r="1"/><circle cx="17.5" cy="10.5" r="1"/></svg>`,
-  kiln: `<svg viewBox="0 0 24 24"><path d="M7 8h10l1 12H6L7 8Z"/><path d="m6 5 10-3 2 3"/><path d="M9 12h6M9 16h6"/></svg>`,
+  kiln: `<svg viewBox="0 0 24 24"><path d="M18.9 16A8 8 0 1 1 18.9 8"/><path d="m16.1 6.1 2.8 1.9-.2-3.3"/></svg>`,
   flame: `<svg viewBox="0 0 24 24"><path d="M13 3c1 4-2 5-2 8 0 1.5 1 2.5 2 2.5 2 0 3-2.2 2.4-4.5C18 11 20 13.4 20 16a8 8 0 0 1-16 0c0-3 1.8-5.8 5-8-1 4 1 5 2 5 1.5 0 2.5-1.5 2-4-.3-1.5-.5-3.2.5-6Z"/></svg>`,
   check: `<svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>`,
 };
