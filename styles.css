@@ -1268,6 +1268,29 @@ h2 {
   padding: 7px 9px;
 }
 
+.status-icon {
+  display: inline-grid;
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.status-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.status-pill.ready .status-icon svg {
+  fill: currentColor;
+  stroke-width: 1.4;
+}
+
 .item-photo .status-pill {
   position: absolute;
   z-index: 2;
@@ -4835,25 +4858,41 @@ h2 {
   .gallery-grid .item-photo .status-pill {
     top: 7px;
     right: 7px;
-    width: 9px;
-    height: 9px;
+    display: grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
     padding: 0;
-    overflow: hidden;
-    color: transparent;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+    overflow: visible;
+    color: white;
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.94),
+      0 3px 9px rgba(30, 29, 25, 0.2);
     font-size: 0;
   }
 
+  .gallery-grid .status-pill .status-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .gallery-grid .status-pill .status-text {
+    display: none;
+  }
+
   .gallery-grid .status-pill.waiting {
-    background: #c99345;
+    border-radius: 50%;
+    background: #bd8126;
   }
 
   .gallery-grid .status-pill.ready {
-    background: var(--green);
+    border-radius: 8px 8px 11px 11px;
+    background: #d45f3d;
   }
 
   .gallery-grid .status-pill.collected {
-    background: var(--blue);
+    border-radius: 6px;
+    background: #2f6c54;
   }
 
   .gallery-grid .firing-pill {
