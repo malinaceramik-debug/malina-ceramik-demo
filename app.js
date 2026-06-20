@@ -2,6 +2,10 @@ import { liveBackend } from "./backend.js";
 
 const STORAGE_KEY = "malina-ceramik-pwa-demo-v2";
 const SESSION_KEY = "malina-ceramik-demo-session";
+const BISQUE_RATE = 22;
+const GLAZE_RATE = 35;
+const COWORK_HOURLY_RATE = 55;
+const COWORK_ROUNDING_MINUTES = 5;
 const demoAccounts = {
   "anna@malinaceramik.pl": {
     password: "malina123",
@@ -293,6 +297,7 @@ const initialState = {
   studentItemsTab: "studio",
   instructorPersonalFilter: "all",
   combinationFilter: "all",
+  settlementTab: "firing",
   instructorStatus: "all",
   instructorFiring: "all",
   catalogGlazeBrands: [],
@@ -705,6 +710,7 @@ function loadState() {
       ...initialState,
       ...saved,
       studentItemsTab: saved.studentItemsTab === "payments" ? "payments" : "studio",
+      settlementTab: saved.settlementTab === "cowork" ? "cowork" : "firing",
       items,
       emailEvents: Array.isArray(saved.emailEvents) ? saved.emailEvents : [],
       notifications: Array.isArray(saved.notifications) ? saved.notifications : [],
@@ -1011,7 +1017,7 @@ function render() {
     else if (state.view === "journal") content.innerHTML = instructorCeramicsView();
     else if (state.view === "combinations") content.innerHTML = studentCombinations();
     else if (state.view === "notifications") content.innerHTML = notificationsView();
-    else if (state.view === "settlements") content.innerHTML = settlementsView();
+    else if (state.view === "settlements") content.innerHTML = settlementsViewV2();
     else if (state.view === "clients") content.innerHTML = clientsView();
     else content.innerHTML = instructorArchive();
   }
@@ -1189,7 +1195,7 @@ function studentItemsTabContent(mine, payments) {
         <div class="history-list">
           ${
             payments.length
-              ? payments.map(historyRow).join("")
+              ? payments.map(historyRowV2).join("")
               : emptyState("Jeszcze bez opłat", "Pierwsze rozliczenie pojawi się tutaj po odbiorze ceramiki.")
           }
         </div>
@@ -1804,7 +1810,7 @@ function studentHistory() {
       <div class="history-list">
         ${
           payments.length
-            ? payments.map(historyRow).join("")
+            ? payments.map(historyRowV2).join("")
             : emptyState("Jeszcze bez rozliczeń", "Pierwsze rozliczenie pojawi się tu po odbiorze ceramiki.")
         }
       </div>
@@ -2008,11 +2014,11 @@ function settlementsView() {
         </div>
         <div class="weight-row">
           <div class="field">
-            <label for="bisque-weight">Biskwit · 28 zł/kg</label>
+            <label for="bisque-weight">Biskwit · ${BISQUE_RATE} zł/kg</label>
             <input class="input weight-input" id="bisque-weight" type="number" inputmode="decimal" min="0" step="0.1" value="0" />
           </div>
           <div class="field">
-            <label for="glaze-weight">Na ostro · 45 zł/kg</label>
+            <label for="glaze-weight">Na ostro · ${GLAZE_RATE} zł/kg</label>
             <input class="input weight-input" id="glaze-weight" type="number" inputmode="decimal" min="0" step="0.1" value="0" />
           </div>
         </div>
@@ -2040,7 +2046,7 @@ function settlementsView() {
     </div>
     <div class="section-head"><div><h2>Ostatnie rozliczenia</h2></div></div>
     <section class="panel">
-      <div class="history-list">${state.payments.map(historyRow).join("")}</div>
+      <div class="history-list">${state.payments.map(historyRowV2).join("")}</div>
     </section>
   `;
 }
@@ -2052,6 +2058,146 @@ function historyRow(payment) {
       <div>
         <strong>${payment.owner}</strong>
         <small>${formatDate(payment.date)} · ${payment.bisque} kg biskwit · ${payment.glaze} kg na ostro</small>
+      </div>
+      <span class="history-amount">${formatMoney(payment.total)}</span>
+    </div>`;
+}
+
+function settlementsViewV2() {
+  const clients = studioClients();
+  const activeTab = state.settlementTab === "cowork" ? "cowork" : "firing";
+  const clientOptions = clients
+    .map(
+      (client) =>
+        `<option value="${escapeHtml(client.name)}">${escapeHtml(client.name)}</option>`,
+    )
+    .join("");
+
+  return `
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Odbiór i płatność</p>
+        <h1>Rozliczenie ceramiki</h1>
+        <p class="lead">Wpisz wagę albo czas. Kwota policzy się automatycznie według aktualnych stawek.</p>
+      </div>
+    </div>
+    <div class="settlement-tabs">
+      <button class="filter-chip ${activeTab === "firing" ? "active" : ""}" data-settlement-tab="firing" type="button">Wypały</button>
+      <button class="filter-chip ${activeTab === "cowork" ? "active" : ""}" data-settlement-tab="cowork" type="button">Co-work</button>
+    </div>
+    <div class="settlement-layout">
+      ${activeTab === "cowork" ? coworkSettlementPanel(clientOptions) : firingSettlementPanel(clientOptions)}
+    </div>
+    <div class="section-head"><div><h2>Ostatnie rozliczenia</h2></div></div>
+    <section class="panel">
+      <div class="history-list">${state.payments.map(historyRowV2).join("")}</div>
+    </section>
+  `;
+}
+
+function firingSettlementPanel(clientOptions) {
+  return `
+    <section class="panel settlement-form">
+      <div class="field">
+        <label for="settlement-client">Kursant</label>
+        <select class="select" id="settlement-client">${clientOptions}</select>
+      </div>
+      <div class="weight-row">
+        <div class="field">
+          <label for="bisque-weight">Biskwit · ${BISQUE_RATE} zł/kg</label>
+          <input class="input weight-input" id="bisque-weight" type="number" inputmode="decimal" min="0" step="0.1" value="0" />
+        </div>
+        <div class="field">
+          <label for="glaze-weight">Na ostro · ${GLAZE_RATE} zł/kg</label>
+          <input class="input weight-input" id="glaze-weight" type="number" inputmode="decimal" min="0" step="0.1" value="0" />
+        </div>
+      </div>
+      <div class="recognition-note">
+        <strong>Wypał</strong>
+        <p>Biskwit liczymy po ${BISQUE_RATE} zł/kg, a wypał na ostro po ${GLAZE_RATE} zł/kg.</p>
+      </div>
+    </section>
+    <aside class="price-summary">
+      <div>
+        <p class="eyebrow">Podsumowanie</p>
+        <div class="price-lines">
+          <div class="price-line"><span>Biskwit</span><strong id="bisque-price">0,00 zł</strong></div>
+          <div class="price-line"><span>Na ostro</span><strong id="glaze-price">0,00 zł</strong></div>
+        </div>
+      </div>
+      <div>
+        <div class="price-total">
+          <small>Do zapłaty</small>
+          <strong id="total-price">0,00 zł</strong>
+        </div>
+        <button class="primary-button" id="save-settlement" type="button">Zapisz rozliczenie</button>
+      </div>
+    </aside>`;
+}
+
+function coworkSettlementPanel(clientOptions) {
+  return `
+    <section class="panel settlement-form">
+      <div class="field">
+        <label for="settlement-client">Kursant</label>
+        <select class="select" id="settlement-client">${clientOptions}</select>
+      </div>
+      <div class="weight-row">
+        <div class="field">
+          <label for="cowork-hours">Godziny</label>
+          <input class="input cowork-input" id="cowork-hours" type="number" inputmode="numeric" min="0" step="1" value="0" />
+        </div>
+        <div class="field">
+          <label for="cowork-minutes">Minuty</label>
+          <input class="input cowork-input" id="cowork-minutes" type="number" inputmode="numeric" min="0" max="59" step="1" value="0" />
+        </div>
+      </div>
+      <div class="recognition-note">
+        <strong>Zaokrąglamy w dół</strong>
+        <p>Czas liczymy do ostatnich pełnych 5 minut, żeby kursantowi zrobiło się miło przy rozliczeniu. 1 h 24 min to 1 h 20 min, a 1 h 26 min to 1 h 25 min.</p>
+      </div>
+    </section>
+    <aside class="price-summary">
+      <div>
+        <p class="eyebrow">Co-work</p>
+        <div class="price-lines">
+          <div class="price-line"><span>Stawka</span><strong>${formatMoney(COWORK_HOURLY_RATE)}/h</strong></div>
+          <div class="price-line"><span>Czas po zaokrągleniu</span><strong id="cowork-time">0 min</strong></div>
+        </div>
+      </div>
+      <div>
+        <div class="price-total">
+          <small>Do zapłaty</small>
+          <strong id="cowork-price">0,00 zł</strong>
+        </div>
+        <button class="primary-button" id="save-cowork-settlement" type="button">Zapisz co-work</button>
+      </div>
+    </aside>`;
+}
+
+function historyRowV2(payment) {
+  if (payment.type === "cowork") {
+    const billedMinutes = Number(payment.billedMinutes || 0);
+    const rate = Number(payment.rate || COWORK_HOURLY_RATE);
+    return `
+      <div class="history-row">
+        <div class="history-icon">${icon("money")}</div>
+        <div>
+          <strong>${escapeHtml(payment.owner || "")}</strong>
+          <small>${formatDate(payment.date)} · Co-work · ${formatDuration(billedMinutes)} · ${formatMoney(rate)}/h</small>
+        </div>
+        <span class="history-amount">${formatMoney(payment.total)}</span>
+      </div>`;
+  }
+
+  const bisque = Number(payment.bisque || 0);
+  const glaze = Number(payment.glaze || 0);
+  return `
+    <div class="history-row">
+      <div class="history-icon">${icon("money")}</div>
+      <div>
+        <strong>${escapeHtml(payment.owner || "")}</strong>
+        <small>${formatDate(payment.date)} · ${bisque} kg biskwit · ${glaze} kg na ostro</small>
       </div>
       <span class="history-amount">${formatMoney(payment.total)}</span>
     </div>`;
@@ -2292,7 +2438,18 @@ function attachViewListeners() {
   document.querySelectorAll(".weight-input").forEach((input) => {
     input.addEventListener("input", updatePrice);
   });
+  document.querySelectorAll(".cowork-input").forEach((input) => {
+    input.addEventListener("input", updateCoworkPrice);
+  });
+  document.querySelectorAll("[data-settlement-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.settlementTab = button.dataset.settlementTab;
+      saveState();
+      render();
+    });
+  });
   document.querySelector("#save-settlement")?.addEventListener("click", saveSettlement);
+  document.querySelector("#save-cowork-settlement")?.addEventListener("click", saveCoworkSettlement);
   document.querySelector("#enable-push")?.addEventListener("click", enablePushNotifications);
 
   document.querySelectorAll(".client-filter").forEach((button) => {
@@ -4001,26 +4158,53 @@ function confirmFired() {
 function updatePrice() {
   const bisque = Number(document.querySelector("#bisque-weight")?.value || 0);
   const glaze = Number(document.querySelector("#glaze-weight")?.value || 0);
-  document.querySelector("#bisque-price").textContent = formatMoney(bisque * 28);
-  document.querySelector("#glaze-price").textContent = formatMoney(glaze * 45);
-  document.querySelector("#total-price").textContent = formatMoney(bisque * 28 + glaze * 45);
+  document.querySelector("#bisque-price").textContent = formatMoney(bisque * BISQUE_RATE);
+  document.querySelector("#glaze-price").textContent = formatMoney(glaze * GLAZE_RATE);
+  document.querySelector("#total-price").textContent = formatMoney(
+    bisque * BISQUE_RATE + glaze * GLAZE_RATE,
+  );
+}
+
+function coworkInputMinutes() {
+  const hours = Math.max(0, Math.trunc(Number(document.querySelector("#cowork-hours")?.value || 0)));
+  const minutes = Math.min(59, Math.max(0, Math.trunc(Number(document.querySelector("#cowork-minutes")?.value || 0))));
+  return hours * 60 + minutes;
+}
+
+function roundedCoworkMinutes(minutes) {
+  return Math.floor(minutes / COWORK_ROUNDING_MINUTES) * COWORK_ROUNDING_MINUTES;
+}
+
+function coworkTotal(minutes) {
+  return (minutes / 60) * COWORK_HOURLY_RATE;
+}
+
+function updateCoworkPrice() {
+  const roundedMinutes = roundedCoworkMinutes(coworkInputMinutes());
+  document.querySelector("#cowork-time").textContent = formatDuration(roundedMinutes);
+  document.querySelector("#cowork-price").textContent = formatMoney(coworkTotal(roundedMinutes));
 }
 
 function saveSettlement() {
   const owner = document.querySelector("#settlement-client").value;
   const bisque = Number(document.querySelector("#bisque-weight").value || 0);
   const glaze = Number(document.querySelector("#glaze-weight").value || 0);
-  const total = bisque * 28 + glaze * 45;
+  const total = bisque * BISQUE_RATE + glaze * GLAZE_RATE;
   if (!total) {
     showToast("Najpierw wpisz wagę ceramiki.");
     return;
   }
   state.payments.unshift({
     id: Date.now(),
+    type: "firing",
     owner,
-    date: "2026-06-09",
+    date: new Date().toISOString().slice(0, 10),
     bisque,
     glaze,
+    rates: {
+      bisque: BISQUE_RATE,
+      glaze: GLAZE_RATE,
+    },
     total,
   });
   publishStudioEvent({
@@ -4031,6 +4215,44 @@ function saveSettlement() {
   saveState();
   render();
   showToast(`Rozliczenie ${formatMoney(total)} zostało zapisane.`);
+}
+
+function saveCoworkSettlement() {
+  const owner = document.querySelector("#settlement-client").value;
+  const rawMinutes = coworkInputMinutes();
+  const billedMinutes = roundedCoworkMinutes(rawMinutes);
+  const total = coworkTotal(billedMinutes);
+  if (!billedMinutes) {
+    showToast("Najpierw wpisz czas co-worku.");
+    return;
+  }
+  state.payments.unshift({
+    id: Date.now(),
+    type: "cowork",
+    owner,
+    date: new Date().toISOString().slice(0, 10),
+    rawMinutes,
+    billedMinutes,
+    rate: COWORK_HOURLY_RATE,
+    total,
+  });
+  publishStudioEvent({
+    type: "settlement-added",
+    title: "Nowe rozliczenie co-worku",
+    body: `${currentInstructorName()} zapisaĹ‚(a) co-work ${formatMoney(total)} dla ${owner}.`,
+  });
+  saveState();
+  render();
+  showToast(`Co-work ${formatMoney(total)} zostaĹ‚ zapisany.`);
+}
+
+function formatDuration(minutes) {
+  const safeMinutes = Math.max(0, Math.trunc(Number(minutes || 0)));
+  const hours = Math.floor(safeMinutes / 60);
+  const rest = safeMinutes % 60;
+  if (!hours) return `${rest} min`;
+  if (!rest) return `${hours} h`;
+  return `${hours} h ${rest} min`;
 }
 
 function formatMoney(value) {

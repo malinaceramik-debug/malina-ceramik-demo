@@ -2745,6 +2745,13 @@ h2 {
   gap: 20px;
 }
 
+.settlement-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -6px 0 18px;
+}
+
 .settlement-form {
   display: grid;
   gap: 18px;
