@@ -249,6 +249,29 @@ body.login-visible {
   border-radius: 15px;
 }
 
+.install-app-button {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 13px 14px;
+  border: 1px solid #d6e4dc;
+  border-radius: 16px;
+  color: var(--green);
+  background: #f3f8f5;
+  cursor: pointer;
+  text-align: left;
+}
+
+.install-app-button span {
+  font-weight: 850;
+}
+
+.install-app-button small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .demo-login {
   display: flex;
   align-items: center;
@@ -1194,47 +1217,27 @@ h2 {
 .gallery-grid .item-card.status-waiting .item-photo::after {
   position: absolute;
   z-index: 1;
-  inset: 0;
+  inset: 38% 0 0;
   content: "";
   pointer-events: none;
 }
 
 .gallery-grid .item-card.status-waiting.firing-bisque .item-photo::after {
-  background:
-    linear-gradient(
-      to right,
-      rgba(198, 135, 36, 0.54),
-      rgba(198, 135, 36, 0) 13%,
-      rgba(198, 135, 36, 0) 87%,
-      rgba(198, 135, 36, 0.54)
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(198, 135, 36, 0.3),
-      rgba(198, 135, 36, 0) 18%,
-      rgba(198, 135, 36, 0.07) 55%,
-      rgba(198, 135, 36, 0.7)
-    );
-  box-shadow: inset 0 0 0 3px rgba(198, 135, 36, 0.6);
+  background: linear-gradient(
+    to bottom,
+    rgba(198, 135, 36, 0),
+    rgba(198, 135, 36, 0.08) 42%,
+    rgba(198, 135, 36, 0.42) 100%
+  );
 }
 
 .gallery-grid .item-card.status-waiting.firing-glaze .item-photo::after {
-  background:
-    linear-gradient(
-      to right,
-      rgba(210, 91, 56, 0.5),
-      rgba(210, 91, 56, 0) 13%,
-      rgba(210, 91, 56, 0) 87%,
-      rgba(210, 91, 56, 0.5)
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(210, 91, 56, 0.32),
-      rgba(210, 91, 56, 0) 18%,
-      rgba(210, 91, 56, 0.05) 55%,
-      rgba(210, 91, 56, 0.58)
-    );
-  box-shadow: inset 0 0 0 3px rgba(210, 91, 56, 0.56);
+  background: linear-gradient(
+    to bottom,
+    rgba(210, 91, 56, 0),
+    rgba(210, 91, 56, 0.07) 42%,
+    rgba(210, 91, 56, 0.38) 100%
+  );
 }
 
 [data-gallery-section="waiting-bisque"] .item-photo,
@@ -1832,6 +1835,30 @@ h2 {
   margin-top: 5px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.install-instructions {
+  display: grid;
+  gap: 12px;
+}
+
+.install-instructions div {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fffaf6;
+}
+
+.install-instructions strong,
+.install-instructions span {
+  display: block;
+}
+
+.install-instructions span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .student-item-intro strong,
@@ -4871,21 +4898,19 @@ h2 {
   .gallery-grid .item-card.status-waiting.firing-bisque .item-photo::after {
     background: linear-gradient(
       to bottom,
-      rgba(198, 135, 36, 0) 48%,
-      rgba(198, 135, 36, 0.08) 66%,
+      rgba(198, 135, 36, 0),
+      rgba(198, 135, 36, 0.08) 42%,
       rgba(198, 135, 36, 0.42) 100%
     );
-    box-shadow: inset 0 -3px rgba(198, 135, 36, 0.66);
   }
 
   .gallery-grid .item-card.status-waiting.firing-glaze .item-photo::after {
     background: linear-gradient(
       to bottom,
-      rgba(210, 91, 56, 0) 48%,
-      rgba(210, 91, 56, 0.07) 66%,
+      rgba(210, 91, 56, 0),
+      rgba(210, 91, 56, 0.07) 42%,
       rgba(210, 91, 56, 0.38) 100%
     );
-    box-shadow: inset 0 -3px rgba(210, 91, 56, 0.62);
   }
 
   .gallery-grid .item-photo {

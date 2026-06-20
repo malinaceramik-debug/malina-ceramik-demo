@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#315f4b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Malina" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="robots" content="noindex, nofollow" />
     <meta
       name="description"
@@ -11,8 +14,9 @@
     />
     <title>Malina ceramik studio ceramiki</title>
     <link rel="icon" href="assets/malina-app-icon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="assets/malina-app-icon.png" />
     <link rel="manifest" href="manifest.json" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260620-1" />
   </head>
   <body>
     <main class="login-screen" id="login-screen">
@@ -50,6 +54,10 @@
             <p class="login-error hidden" id="login-error" role="alert"></p>
             <button class="primary-button login-submit" id="login-submit" type="submit">Zaloguj się</button>
           </form>
+          <button class="install-app-button" id="install-app-button" type="button">
+            <span>Dodaj aplikację do telefonu</span>
+            <small>Ikona pojawi się na ekranie głównym, bez szukania linku i QR.</small>
+          </button>
           <div class="demo-login" id="demo-login">
             <span>Wersja demo</span>
             <div>

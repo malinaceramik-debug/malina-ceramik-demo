@@ -359,6 +359,7 @@ let liveSaveTimer = null;
 let lastRemoteStateHash = "";
 let serviceWorkerRegistration = null;
 let liveStateLoaded = false;
+let deferredInstallPrompt = null;
 
 const sharedStateKeys = [
   "items",
@@ -3506,7 +3507,7 @@ function renderAddFlow() {
       ${addFlow.step > 1 ? '<button class="secondary-button" id="add-back" type="button">Wstecz</button>' : "<span></span>"}
       ${
         addFlow.step === 1
-          ? `<button class="primary-button" id="add-next" type="button" ${addFlow.photos.length && addFlowOwnerReady() ? "" : "disabled"}>Dodałem już wszystkie zdjęcia</button>`
+          ? `<button class="primary-button" id="add-next" type="button" ${addFlow.photos.length ? "" : "disabled"}>Dodałem już wszystkie zdjęcia</button>`
           : ""
       }
       ${addFlow.step === 2 ? '<button class="primary-button" id="confirm-add" type="button">Wyślij zdjęcia</button>' : ""}
@@ -3521,6 +3522,11 @@ function renderAddFlow() {
   modal.querySelector("#add-next")?.addEventListener("click", () => {
     if (!addFlowOwnerReady()) {
       showToast("Wybierz właściciela ceramiki.");
+      const ownerField = modal.querySelector(
+        addFlow.ownerSelection === "__new__" ? "#new-owner-name" : "#add-owner",
+      );
+      ownerField?.focus();
+      ownerField?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     addFlow.step += 1;
@@ -3690,7 +3696,7 @@ function addFlowOwnerReady() {
 
 function updateAddFlowNextState() {
   const button = document.querySelector("#add-next");
-  if (button) button.disabled = !addFlow.photos.length || !addFlowOwnerReady();
+  if (button) button.disabled = !addFlow.photos.length;
 }
 
 function resolveAddFlowOwner() {
@@ -4089,6 +4095,51 @@ function showToast(message) {
   toastTimer = setTimeout(() => toast.classList.add("hidden"), 3400);
 }
 
+function updateInstallButton() {
+  const button = document.querySelector("#install-app-button");
+  if (!button) return;
+  const standalone =
+    window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone;
+  button.classList.toggle("hidden", Boolean(standalone));
+}
+
+async function openInstallInstructions() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice.catch(() => null);
+    deferredInstallPrompt = null;
+    updateInstallButton();
+    return;
+  }
+  const modal = document.querySelector("#modal");
+  modal.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">Aplikacja na telefon</p>
+        <h2 id="modal-title">Dodaj Malinę do ekranu głównego</h2>
+        <p>Po dodaniu otwierasz ją jak zwykłą aplikację, bez linku i bez QR.</p>
+      </div>
+      <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
+    </div>
+    <div class="modal-body install-instructions">
+      <div>
+        <strong>iPhone / Safari</strong>
+        <span>Dotknij Udostępnij, potem „Do ekranu początkowego”.</span>
+      </div>
+      <div>
+        <strong>Android / Chrome</strong>
+        <span>Dotknij menu przeglądarki i wybierz „Zainstaluj aplikację” albo „Dodaj do ekranu głównego”.</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="primary-button close-modal" type="button">Jasne</button>
+    </div>`;
+  modal.querySelectorAll(".close-modal").forEach((button) =>
+    button.addEventListener("click", closeModal),
+  );
+  openModal();
+}
+
 document.querySelectorAll("[data-role]").forEach((button) => {
   button.addEventListener("click", () => {
     state.role = button.dataset.role;
@@ -4162,6 +4213,20 @@ document.querySelector("#toggle-password").addEventListener("click", (event) => 
   event.currentTarget.textContent = visible ? "Pokaż" : "Ukryj";
   event.currentTarget.setAttribute("aria-label", visible ? "Pokaż hasło" : "Ukryj hasło");
 });
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  updateInstallButton();
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  updateInstallButton();
+  showToast("Aplikacja została dodana do telefonu.");
+});
+
+document.querySelector("#install-app-button")?.addEventListener("click", openInstallInstructions);
 
 document.querySelectorAll("[data-demo-login]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -4265,6 +4330,7 @@ async function handleJournalPhotoInput(event) {
 });
 
 async function bootstrapApplication() {
+  updateInstallButton();
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     navigator.serviceWorker
       .register("sw.js")

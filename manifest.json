@@ -4,7 +4,9 @@
   "description": "Prosty obieg ceramiki od półki do odbioru.",
   "lang": "pl",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#fbf6f1",
   "theme_color": "#315f4b",
   "icons": [
