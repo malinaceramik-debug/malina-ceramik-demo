@@ -1,6 +1,6 @@
 importScripts("./firebase-config-sw.js");
 
-const CACHE = "malina-ceramik-demo-v41";
+const CACHE = "malina-ceramik-demo-v42";
 const ASSETS = [
   "./",
   "index.html",
@@ -17,10 +17,23 @@ const ASSETS = [
   "assets/malina-app-icon-maskable.png",
   "assets/malina-app-icon-v2.png",
   "assets/malina-app-icon-maskable-v2.png",
+  "assets/malina-app-icon-flat-512.png",
+  "assets/malina-app-icon-maskable-flat-512.png",
   "assets/apple-touch-icon-malina-20260620.png",
   "assets/apple-touch-icon-malina-flat-20260620.png",
   "apple-touch-icon.png",
   "apple-touch-icon-precomposed.png",
+  "apple-touch-icon-57x57.png",
+  "apple-touch-icon-60x60.png",
+  "apple-touch-icon-72x72.png",
+  "apple-touch-icon-76x76.png",
+  "apple-touch-icon-114x114.png",
+  "apple-touch-icon-120x120.png",
+  "apple-touch-icon-144x144.png",
+  "apple-touch-icon-152x152.png",
+  "apple-touch-icon-167x167.png",
+  "apple-touch-icon-180x180.png",
+  "apple-touch-icon-192x192.png",
   "assets/malina-hands-hero.webp",
   "assets/malina-hands-mobile.webp",
   "assets/kubek.webp",
