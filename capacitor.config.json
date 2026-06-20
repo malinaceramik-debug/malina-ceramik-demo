@@ -1,0 +1,8 @@
+{
+  "appId": "com.malinaceramik.studio",
+  "appName": "Malina Ceramik",
+  "webDir": "mobile-www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

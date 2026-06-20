@@ -3,6 +3,7 @@ work/
 node_modules/
 functions/node_modules/
 .firebase/
+mobile-www/
 firebase-debug.log
 firebase-debug.*.log
 
