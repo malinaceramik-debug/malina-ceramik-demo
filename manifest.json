@@ -11,13 +11,13 @@
   "theme_color": "#315f4b",
   "icons": [
     {
-      "src": "assets/malina-app-icon.png",
+      "src": "assets/malina-app-icon-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/malina-app-icon-maskable.png",
+      "src": "assets/malina-app-icon-maskable-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

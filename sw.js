@@ -1,6 +1,6 @@
 importScripts("./firebase-config-sw.js");
 
-const CACHE = "malina-ceramik-demo-v38";
+const CACHE = "malina-ceramik-demo-v39";
 const ASSETS = [
   "./",
   "index.html",
@@ -15,6 +15,8 @@ const ASSETS = [
   "assets/malina-apron.png",
   "assets/malina-app-icon.png",
   "assets/malina-app-icon-maskable.png",
+  "assets/malina-app-icon-v2.png",
+  "assets/malina-app-icon-maskable-v2.png",
   "assets/malina-hands-hero.webp",
   "assets/malina-hands-mobile.webp",
   "assets/kubek.webp",
@@ -33,8 +35,8 @@ if (self.MALINA_FIREBASE_CONFIG?.apiKey) {
     const title = payload.notification?.title || "Malina ceramik";
     const options = {
       body: payload.notification?.body || "Nowa informacja z pracowni.",
-      icon: "./assets/malina-app-icon.png",
-      badge: "./assets/malina-app-icon.png",
+      icon: "./assets/malina-app-icon-v2.png",
+      badge: "./assets/malina-app-icon-v2.png",
       data: {
         url: payload.fcmOptions?.link || payload.data?.url || "./",
       },
