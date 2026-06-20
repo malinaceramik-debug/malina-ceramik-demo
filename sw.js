@@ -1,6 +1,6 @@
 importScripts("./firebase-config-sw.js");
 
-const CACHE = "malina-ceramik-demo-v44";
+const CACHE = "malina-ceramik-demo-v45";
 const ASSETS = [
   "./",
   "install.html",
@@ -82,6 +82,29 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+
+  const url = new URL(event.request.url);
+  const sameOrigin = url.origin === self.location.origin;
+  const appShellRequest =
+    sameOrigin &&
+    (event.request.mode === "navigate" ||
+      ["document", "script", "style", "manifest"].includes(event.request.destination) ||
+      ["/", "/index.html", "/app.js", "/styles.css", "/manifest.json"].includes(url.pathname));
+
+  if (appShellRequest) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./"))),
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request)),
   );

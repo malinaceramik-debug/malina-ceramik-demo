@@ -363,6 +363,7 @@ let liveStateUnsubscribe = null;
 let liveSaveTimer = null;
 let lastRemoteStateHash = "";
 let serviceWorkerRegistration = null;
+let serviceWorkerRefreshing = false;
 let liveStateLoaded = false;
 let deferredInstallPrompt = null;
 
@@ -4554,10 +4555,16 @@ async function handleJournalPhotoInput(event) {
 async function bootstrapApplication() {
   updateInstallButton();
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (serviceWorkerRefreshing) return;
+      serviceWorkerRefreshing = true;
+      window.location.reload();
+    });
     navigator.serviceWorker
       .register("sw.js")
       .then((registration) => {
         serviceWorkerRegistration = registration;
+        registration.update();
       })
       .catch(() => {
         serviceWorkerRegistration = null;
