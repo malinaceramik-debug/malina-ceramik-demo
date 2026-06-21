@@ -1,6 +1,6 @@
 importScripts("./firebase-config-sw.js");
 
-const CACHE = "malina-ceramik-demo-v48";
+const CACHE = "malina-ceramik-demo-v49";
 const ASSETS = [
   "./",
   "install.html",
@@ -25,6 +25,8 @@ const ASSETS = [
   "assets/malina-app-icon-composed-2048.png",
   "assets/malina-app-icon-composed-512.png",
   "assets/malina-app-icon-composed-maskable-512.png",
+  "apple-touch-icon-ios-full-20260621-v2.png",
+  "assets/apple-touch-icon-ios-full-20260621-v2.png",
   "apple-touch-icon-full-20260621.png",
   "assets/apple-touch-icon-malina-full-20260621.png",
   "assets/apple-touch-icon-malina-composed-20260620.png",
