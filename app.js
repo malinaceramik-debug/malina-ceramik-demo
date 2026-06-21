@@ -4415,7 +4415,7 @@ function renderInstallSteps(platform) {
           ? `
             <div><strong>1</strong><span>Dotknij ikonę udostępniania.</span></div>
             <div><strong>2</strong><span>Wybierz „Dodaj do ekranu głównego”.</span></div>
-            <div><strong>3</strong><span>Nazwa powinna być ustawiona jako „Malina Ceramik Studio Ceramiki”. Dotknij „Dodaj”.</span></div>`
+            <div><strong>3</strong><span>Nazwa powinna być ustawiona jako „Studio Ceramiki”. Dotknij „Dodaj”.</span></div>`
           : `
             <div><strong>1</strong><span>Otwórz tę stronę w Chrome.</span></div>
             <div><strong>2</strong><span>Dotknij menu z trzema kropkami.</span></div>
