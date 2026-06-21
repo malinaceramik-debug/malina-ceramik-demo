@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Podglad animacji Malina</title>
+    <style>
+      :root {
+        --cream: #fbf6f1;
+        --clay: #ead6c3;
+        --bisque: #d4ad78;
+        --glaze: #e97958;
+        --green: #315f4b;
+        --ink: #202323;
+        --muted: #736b64;
+        --line: rgba(41, 37, 33, 0.12);
+        --shadow: 0 22px 70px rgba(44, 35, 27, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 12% 10%, rgba(233, 121, 88, 0.14), transparent 28%),
+          linear-gradient(180deg, #fffaf4, #f8efe8 58%, #efe4da);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 42px 0 70px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: #c9684d;
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(42px, 8vw, 84px);
+        font-weight: 500;
+        letter-spacing: -0.055em;
+        line-height: 0.9;
+      }
+
+      .lead {
+        max-width: 640px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.55;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 32px;
+        background: rgba(255, 250, 246, 0.78);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .stage {
+        position: relative;
+        display: grid;
+        min-height: 390px;
+        place-items: center;
+        overflow: hidden;
+        isolation: isolate;
+      }
+
+      .stage::before,
+      .stage::after {
+        position: absolute;
+        content: "";
+        pointer-events: none;
+      }
+
+      .copy {
+        display: grid;
+        gap: 8px;
+        padding: 22px;
+        border-top: 1px solid var(--line);
+      }
+
+      .copy h2 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 28px;
+        font-weight: 500;
+        letter-spacing: -0.035em;
+      }
+
+      .copy p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .copy button {
+        width: fit-content;
+        margin-top: 10px;
+        padding: 11px 15px;
+        border: 1px solid rgba(49, 95, 75, 0.2);
+        border-radius: 999px;
+        color: var(--green);
+        background: #e8f2ec;
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .logo {
+        position: relative;
+        display: block;
+        width: min(250px, 56vw);
+        z-index: 2;
+      }
+
+      .wordmark {
+        width: min(330px, 70vw);
+      }
+
+      .cup-wordmark {
+        width: min(350px, 72vw);
+      }
+
+      .replay .stamp-logo,
+      .replay .stamp-wordmark,
+      .replay .kiln-logo,
+      .replay .kiln-wordmark,
+      .replay .drop-letter,
+      .replay .drop-cup,
+      .replay .minimal-logo,
+      .replay .minimal-line,
+      .replay .morph-blob,
+      .replay .morph-apron,
+      .replay .morph-wordmark {
+        animation: none !important;
+      }
+
+      /* 1. Stamp */
+      .stamp {
+        background:
+          radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.56), transparent 45%),
+          linear-gradient(135deg, #f4e3d1, #d7b08e);
+      }
+
+      .stamp::before {
+        inset: 34px;
+        border-radius: 46% 54% 50% 45%;
+        background:
+          radial-gradient(circle at 32% 38%, rgba(123, 82, 54, 0.08), transparent 22%),
+          radial-gradient(circle at 70% 72%, rgba(68, 43, 28, 0.08), transparent 30%),
+          rgba(255, 255, 255, 0.16);
+        filter: blur(1px);
+      }
+
+      .stamp-logo {
+        width: 185px;
+        opacity: 0;
+        filter: drop-shadow(0 20px 30px rgba(65, 44, 31, 0.24));
+        transform: translateY(-34px) scale(1.14);
+        animation: stampHit 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+      }
+
+      .stamp-wordmark {
+        position: absolute;
+        bottom: 72px;
+        width: 260px;
+        opacity: 0;
+        transform: translateY(12px);
+        animation: softRise 2.6s ease infinite;
+      }
+
+      @keyframes stampHit {
+        0% { opacity: 0; transform: translateY(-48px) scale(1.18); }
+        24% { opacity: 1; transform: translateY(6px) scale(0.94); }
+        34% { transform: translateY(0) scale(1); }
+        72% { opacity: 1; transform: translateY(0) scale(1); }
+        100% { opacity: 0; transform: translateY(16px) scale(0.98); }
+      }
+
+      @keyframes softRise {
+        0%, 28% { opacity: 0; transform: translateY(14px); }
+        42%, 80% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-4px); }
+      }
+
+      /* 2. Kiln glow */
+      .kiln {
+        background:
+          linear-gradient(180deg, rgba(24, 18, 14, 0.18), rgba(24, 18, 14, 0.46)),
+          url("assets/malina-kiln.webp") center / cover;
+      }
+
+      .kiln::before {
+        inset: auto 0 0;
+        height: 70%;
+        background: radial-gradient(circle at 50% 82%, rgba(236, 116, 82, 0.76), transparent 58%);
+        animation: kilnGlow 2.8s ease-in-out infinite;
+        mix-blend-mode: screen;
+      }
+
+      .kiln-logo {
+        width: 150px;
+        padding: 24px;
+        border-radius: 32px;
+        background: rgba(255, 245, 236, 0.8);
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+        animation: kilnLogo 2.8s ease infinite;
+      }
+
+      .kiln-wordmark {
+        position: absolute;
+        bottom: 74px;
+        width: 260px;
+        opacity: 0;
+        filter: invert(1) brightness(8);
+        animation: kilnText 2.8s ease infinite;
+      }
+
+      @keyframes kilnGlow {
+        0%, 100% { opacity: 0.38; transform: scaleY(0.72); }
+        44%, 72% { opacity: 0.98; transform: scaleY(1); }
+      }
+
+      @keyframes kilnLogo {
+        0%, 12% { opacity: 0; transform: translateY(28px) scale(0.94); }
+        34%, 78% { opacity: 1; transform: translateY(0) scale(1); }
+        100% { opacity: 0; transform: translateY(-10px) scale(1.02); }
+      }
+
+      @keyframes kilnText {
+        0%, 42% { opacity: 0; transform: translateY(12px); }
+        55%, 82% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-8px); }
+      }
+
+      /* 3. Letters into cup */
+      .letter-cup {
+        background: radial-gradient(circle at 50% 25%, #fffaf6, #efd9c7 62%, #e6c5ad);
+      }
+
+      .drop-cup {
+        position: absolute;
+        bottom: 72px;
+        width: 150px;
+        height: 86px;
+        border-radius: 12px 12px 58px 58px;
+        background: var(--ink);
+        animation: cupBounce 3.1s ease infinite;
+      }
+
+      .drop-cup::after {
+        position: absolute;
+        right: -34px;
+        top: 20px;
+        width: 42px;
+        height: 34px;
+        border: 13px solid var(--ink);
+        border-left: 0;
+        border-radius: 0 40px 40px 0;
+        content: "";
+      }
+
+      .drop-letter {
+        position: relative;
+        z-index: 2;
+        display: inline-block;
+        margin: 0 -1px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(34px, 7vw, 52px);
+        font-weight: 600;
+        color: var(--ink);
+        opacity: 0;
+        transform: translateY(-120px);
+        animation: letterDrop 3.1s cubic-bezier(0.2, 0.9, 0.16, 1) infinite;
+      }
+
+      .drop-letter:nth-child(1) { animation-delay: 0.05s; }
+      .drop-letter:nth-child(2) { animation-delay: 0.14s; }
+      .drop-letter:nth-child(3) { animation-delay: 0.23s; }
+      .drop-letter:nth-child(4) { animation-delay: 0.32s; }
+      .drop-letter:nth-child(5) { animation-delay: 0.41s; }
+      .drop-letter:nth-child(6) { animation-delay: 0.5s; }
+
+      .drop-final {
+        position: absolute;
+        bottom: 190px;
+        width: 250px;
+        opacity: 0;
+        animation: finalWord 3.1s ease infinite;
+      }
+
+      @keyframes letterDrop {
+        0% { opacity: 0; transform: translateY(-120px) rotate(-7deg); }
+        18% { opacity: 1; }
+        44% { opacity: 1; transform: translateY(64px) rotate(2deg); }
+        58%, 100% { opacity: 0; transform: translateY(92px) scale(0.76); }
+      }
+
+      @keyframes cupBounce {
+        0%, 38%, 100% { transform: translateY(0) scale(1); }
+        48% { transform: translateY(8px) scale(1.05, 0.94); }
+        60% { transform: translateY(-3px) scale(0.98, 1.03); }
+      }
+
+      @keyframes finalWord {
+        0%, 58% { opacity: 0; transform: translateY(10px); }
+        72%, 88% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-8px); }
+      }
+
+      /* 4. Minimal */
+      .minimal {
+        background: linear-gradient(180deg, #fffaf6, #f7ede5);
+      }
+
+      .minimal-logo {
+        width: min(360px, 72vw);
+        opacity: 0;
+        filter: blur(10px);
+        transform: translateY(10px);
+        animation: minimalIn 2.7s ease infinite;
+      }
+
+      .minimal-line {
+        position: absolute;
+        bottom: 122px;
+        width: 112px;
+        height: 2px;
+        border-radius: 999px;
+        background: var(--green);
+        transform: scaleX(0);
+        transform-origin: center;
+        animation: lineIn 2.7s ease infinite;
+      }
+
+      @keyframes minimalIn {
+        0%, 18% { opacity: 0; filter: blur(10px); transform: translateY(10px); }
+        38%, 78% { opacity: 1; filter: blur(0); transform: translateY(0); }
+        100% { opacity: 0; filter: blur(7px); transform: translateY(-8px); }
+      }
+
+      @keyframes lineIn {
+        0%, 42% { transform: scaleX(0); opacity: 0; }
+        56%, 78% { transform: scaleX(1); opacity: 1; }
+        100% { transform: scaleX(0.7); opacity: 0; }
+      }
+
+      /* 5. Morph */
+      .morph {
+        background:
+          radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.65), transparent 38%),
+          linear-gradient(145deg, #f5e2c7, #e37b5f);
+      }
+
+      .morph-blob {
+        position: absolute;
+        width: 170px;
+        height: 170px;
+        border-radius: 48% 52% 44% 56%;
+        background: linear-gradient(145deg, #d5aa72, #e9785c);
+        box-shadow: inset 0 10px 26px rgba(255, 255, 255, 0.32), 0 28px 55px rgba(130, 67, 44, 0.2);
+        animation: clayMorph 3s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+      }
+
+      .morph-apron {
+        width: 200px;
+        opacity: 0;
+        transform: scale(0.82);
+        animation: apronAppear 3s ease infinite;
+      }
+
+      .morph-wordmark {
+        position: absolute;
+        bottom: 74px;
+        width: 260px;
+        opacity: 0;
+        animation: softRise 3s ease infinite;
+      }
+
+      @keyframes clayMorph {
+        0% { opacity: 0; transform: scale(0.7) rotate(-10deg); border-radius: 52% 48% 60% 40%; }
+        18%, 44% { opacity: 1; transform: scale(1) rotate(12deg); border-radius: 45% 55% 48% 52%; }
+        58%, 100% { opacity: 0; transform: scale(1.2) rotate(0deg); border-radius: 30%; }
+      }
+
+      @keyframes apronAppear {
+        0%, 38% { opacity: 0; transform: scale(0.82); }
+        56%, 80% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(1.03); }
+      }
+
+      @media (max-width: 780px) {
+        .page {
+          width: min(100% - 22px, 520px);
+          padding-top: 28px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .stage {
+          min-height: 350px;
+        }
+
+        .copy {
+          padding: 19px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Podglad animacji startowej</p>
+        <h1>Jak ma wejsc Malina?</h1>
+        <p class="lead">
+          To sa lekkie prototypy ruchu, jeszcze nie podpiete do aplikacji. Kliknij
+          “Odtworz jeszcze raz”, zeby zlapac rytm animacji.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="stage stamp">
+            <img class="stamp-logo" src="assets/malina-apron.png" alt="" />
+            <img class="stamp-wordmark" src="assets/malina-wordmark.png" alt="" />
+          </div>
+          <div class="copy">
+            <h2>Stempel na glinie</h2>
+            <p>Najbardziej pracowniane i spokojne. Logo zachowuje sie jak odcisk na miekkiej glinie.</p>
+            <button type="button">Odtworz jeszcze raz</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="stage kiln">
+            <img class="kiln-logo" src="assets/malina-apron.png" alt="" />
+            <img class="kiln-wordmark" src="assets/malina-wordmark.png" alt="" />
+          </div>
+          <div class="copy">
+            <h2>Piec sie rozgrzewa</h2>
+            <p>Klimat wypalu: od ciepla i lekkiego blasku do spokojnego wejscia logotypu.</p>
+            <button type="button">Odtworz jeszcze raz</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="stage letter-cup">
+            <div aria-hidden="true">
+              <span class="drop-letter">m</span>
+              <span class="drop-letter">a</span>
+              <span class="drop-letter">l</span>
+              <span class="drop-letter">i</span>
+              <span class="drop-letter">n</span>
+              <span class="drop-letter">a</span>
+            </div>
+            <div class="drop-cup" aria-hidden="true"></div>
+            <img class="drop-final" src="assets/malina-cup-logo.png" alt="" />
+          </div>
+          <div class="copy">
+            <h2>Literki do kubka</h2>
+            <p>Bardziej kreatywne i urocze. Dobre, jesli chcemy pokazac lekki humor marki.</p>
+            <button type="button">Odtworz jeszcze raz</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="stage minimal">
+            <img class="minimal-logo" src="assets/malina-cup-logo.png" alt="" />
+            <span class="minimal-line" aria-hidden="true"></span>
+          </div>
+          <div class="copy">
+            <h2>Minimal premium</h2>
+            <p>Najczystsze i najbardziej codzienne. Malo ruchu, duzo oddechu, nic nie przeszkadza.</p>
+            <button type="button">Odtworz jeszcze raz</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="stage morph">
+            <span class="morph-blob" aria-hidden="true"></span>
+            <img class="morph-apron" src="assets/malina-apron.png" alt="" />
+            <img class="morph-wordmark" src="assets/malina-wordmark.png" alt="" />
+          </div>
+          <div class="copy">
+            <h2>Glina w logo</h2>
+            <p>Najbardziej satysfakcjonujace. Plamka gliny przechodzi w znak, a kolor lapie wypal.</p>
+            <button type="button">Odtworz jeszcze raz</button>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      document.querySelectorAll(".card button").forEach((button) => {
+        button.addEventListener("click", () => {
+          const stage = button.closest(".card").querySelector(".stage");
+          stage.classList.add("replay");
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => stage.classList.remove("replay"));
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
