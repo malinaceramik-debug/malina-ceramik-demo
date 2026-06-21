@@ -4376,7 +4376,7 @@ function renderInstallChoice() {
     <div class="modal-body install-choice">
       <button class="install-choice-card ${isIosDevice() ? "suggested" : ""}" data-install-platform="ios" type="button">
         <strong>iPhone</strong>
-        <span>Safari → Udostępnij → Do ekranu głównego</span>
+        <span>Udostępnij → Dodaj do ekranu głównego</span>
       </button>
       <button class="install-choice-card ${isAndroidDevice() ? "suggested" : ""}" data-install-platform="android" type="button">
         <strong>Android</strong>
@@ -4405,7 +4405,7 @@ function renderInstallSteps(platform) {
       <div>
         <p class="eyebrow">Aplikacja na telefon</p>
         <h2 id="modal-title">${ios ? "Dodaj na iPhonie" : "Dodaj na Androidzie"}</h2>
-        <p>${ios ? "Apple nie pozwala aplikacji otworzyć tego ekranu automatycznie, ale zajmuje to kilka sekund." : "Jeżeli przeglądarka nie pokazała okna instalacji, użyj tej ścieżki."}</p>
+        <p>${ios ? "Po zeskanowaniu QR jesteś już w Safari. Zostaje tylko dodać ikonę na ekran główny." : "Jeżeli przeglądarka nie pokazała okna instalacji, użyj tej ścieżki."}</p>
       </div>
       <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
     </div>
@@ -4413,10 +4413,9 @@ function renderInstallSteps(platform) {
       ${
         ios
           ? `
-            <div><strong>1</strong><span>Otwórz tę stronę w Safari.</span></div>
-            <div><strong>2</strong><span>Dotknij ikonę udostępniania.</span></div>
-            <div><strong>3</strong><span>Wybierz „Do ekranu początkowego”.</span></div>
-            <div><strong>4</strong><span>Dotknij „Dodaj”. Ikona Malina pojawi się obok aplikacji.</span></div>`
+            <div><strong>1</strong><span>Dotknij ikonę udostępniania.</span></div>
+            <div><strong>2</strong><span>Wybierz „Dodaj do ekranu głównego”.</span></div>
+            <div><strong>3</strong><span>Nazwa powinna być ustawiona jako „Malina Ceramik Studio Ceramiki”. Dotknij „Dodaj”.</span></div>`
           : `
             <div><strong>1</strong><span>Otwórz tę stronę w Chrome.</span></div>
             <div><strong>2</strong><span>Dotknij menu z trzema kropkami.</span></div>
@@ -4455,7 +4454,7 @@ async function openInstallInstructionsOld() {
     <div class="modal-body install-instructions">
       <div>
         <strong>iPhone / Safari</strong>
-        <span>Dotknij Udostępnij, potem „Do ekranu początkowego”.</span>
+        <span>Dotknij Udostępnij, potem „Dodaj do ekranu głównego”.</span>
       </div>
       <div>
         <strong>Android / Chrome</strong>
