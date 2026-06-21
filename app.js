@@ -6,6 +6,8 @@ const BISQUE_RATE = 22;
 const GLAZE_RATE = 35;
 const COWORK_HOURLY_RATE = 55;
 const COWORK_ROUNDING_MINUTES = 5;
+const STARTUP_SPLASH_MIN_MS = 1600;
+const STARTUP_SPLASH_FADE_MS = 260;
 const demoAccounts = {
   "anna@malinaceramik.pl": {
     password: "malina123",
@@ -366,6 +368,8 @@ let serviceWorkerRegistration = null;
 let serviceWorkerRefreshing = false;
 let liveStateLoaded = false;
 let deferredInstallPrompt = null;
+const startupSplashStartedAt = Date.now();
+let startupSplashPromise = null;
 
 const sharedStateKeys = [
   "items",
@@ -553,6 +557,32 @@ function isRestrictedGuestSession(session = currentSession()) {
   return session?.role === "guest" && session.guestAccess !== false;
 }
 
+function completeStartupSplash() {
+  if (startupSplashPromise) return startupSplashPromise;
+  const splash = document.querySelector("#splash-screen");
+  const finish = () => {
+    document.body.classList.remove("splash-visible");
+    splash?.classList.add("hidden");
+  };
+  if (!splash || splash.classList.contains("hidden")) {
+    finish();
+    startupSplashPromise = Promise.resolve();
+    return startupSplashPromise;
+  }
+  const elapsed = Date.now() - startupSplashStartedAt;
+  const wait = Math.max(0, STARTUP_SPLASH_MIN_MS - elapsed);
+  startupSplashPromise = new Promise((resolve) => {
+    setTimeout(() => {
+      splash.classList.add("is-leaving");
+      setTimeout(() => {
+        finish();
+        resolve();
+      }, STARTUP_SPLASH_FADE_MS);
+    }, wait);
+  });
+  return startupSplashPromise;
+}
+
 function showLogin() {
   clearTimeout(toastTimer);
   document.querySelector("#toast").classList.add("hidden");
@@ -561,7 +591,11 @@ function showLogin() {
   document.querySelector("#mobile-nav").classList.add("hidden");
   document.body.classList.add("login-visible");
   document.body.classList.remove("guest-mode");
-  document.querySelector("#login-email").focus();
+  completeStartupSplash().then(() => {
+    if (!document.querySelector("#login-screen").classList.contains("hidden")) {
+      document.querySelector("#login-email").focus();
+    }
+  });
 }
 
 function showApplication(session) {
@@ -580,6 +614,7 @@ function showApplication(session) {
   document.body.classList.remove("login-visible");
   document.body.classList.toggle("guest-mode", state.role === "guest");
   render();
+  completeStartupSplash();
 }
 
 async function login(email, password) {

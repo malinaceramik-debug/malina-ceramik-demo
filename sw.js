@@ -1,6 +1,6 @@
 importScripts("./firebase-config-sw.js");
 
-const CACHE = "malina-ceramik-demo-v51";
+const CACHE = "malina-ceramik-demo-v52";
 const ASSETS = [
   "./",
   "install.html",
