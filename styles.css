@@ -1842,6 +1842,47 @@ h2 {
   gap: 12px;
 }
 
+.install-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.install-choice-card {
+  min-height: 128px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  color: var(--text);
+  background: #fffaf6;
+  cursor: pointer;
+  text-align: left;
+}
+
+.install-choice-card.suggested {
+  border-color: var(--green);
+  background: var(--green-soft);
+  box-shadow: 0 12px 28px rgba(49, 95, 75, 0.12);
+}
+
+.install-choice-card strong,
+.install-choice-card span {
+  display: block;
+}
+
+.install-choice-card strong {
+  font-family: Georgia, serif;
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.install-choice-card span {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .install-instructions div {
   padding: 16px;
   border: 1px solid var(--line);

@@ -4326,7 +4326,115 @@ function updateInstallButton() {
   button.classList.toggle("hidden", Boolean(standalone));
 }
 
+function isIosDevice() {
+  return (
+    /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+function isAndroidDevice() {
+  return /Android/i.test(navigator.userAgent);
+}
+
 async function openInstallInstructions() {
+  const standalone =
+    window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (standalone) {
+    showToast("Aplikacja jest już dodana do telefonu.");
+    updateInstallButton();
+    return;
+  }
+
+  renderInstallChoice();
+  openModal();
+}
+
+async function promptAndroidInstall() {
+  if (!deferredInstallPrompt) {
+    renderInstallSteps("android");
+    openModal();
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice.catch(() => null);
+  deferredInstallPrompt = null;
+  updateInstallButton();
+}
+
+function renderInstallChoice() {
+  const modal = document.querySelector("#modal");
+  modal.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">Aplikacja na telefon</p>
+        <h2 id="modal-title">Dodaj Malinę do ekranu głównego</h2>
+        <p>Wybierz swój telefon. Pokażemy najkrótszą dostępną ścieżkę dodania ikony.</p>
+      </div>
+      <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
+    </div>
+    <div class="modal-body install-choice">
+      <button class="install-choice-card ${isIosDevice() ? "suggested" : ""}" data-install-platform="ios" type="button">
+        <strong>iPhone</strong>
+        <span>Safari → Udostępnij → Do ekranu głównego</span>
+      </button>
+      <button class="install-choice-card ${isAndroidDevice() ? "suggested" : ""}" data-install-platform="android" type="button">
+        <strong>Android</strong>
+        <span>${deferredInstallPrompt ? "Otwórz okno instalacji aplikacji" : "Chrome → Zainstaluj aplikację"}</span>
+      </button>
+    </div>
+    <div class="modal-foot">
+      <button class="secondary-button close-modal" type="button">Zamknij</button>
+    </div>`;
+  modal.querySelectorAll(".close-modal").forEach((button) =>
+    button.addEventListener("click", closeModal),
+  );
+  modal.querySelector("[data-install-platform='ios']")?.addEventListener("click", () => {
+    renderInstallSteps("ios");
+  });
+  modal.querySelector("[data-install-platform='android']")?.addEventListener("click", async () => {
+    await promptAndroidInstall();
+  });
+}
+
+function renderInstallSteps(platform) {
+  const modal = document.querySelector("#modal");
+  const ios = platform === "ios";
+  modal.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">Aplikacja na telefon</p>
+        <h2 id="modal-title">${ios ? "Dodaj na iPhonie" : "Dodaj na Androidzie"}</h2>
+        <p>${ios ? "Apple nie pozwala aplikacji otworzyć tego ekranu automatycznie, ale zajmuje to kilka sekund." : "Jeżeli przeglądarka nie pokazała okna instalacji, użyj tej ścieżki."}</p>
+      </div>
+      <button class="icon-button close-modal" type="button" aria-label="Zamknij">×</button>
+    </div>
+    <div class="modal-body install-instructions">
+      ${
+        ios
+          ? `
+            <div><strong>1</strong><span>Otwórz tę stronę w Safari.</span></div>
+            <div><strong>2</strong><span>Dotknij ikonę udostępniania.</span></div>
+            <div><strong>3</strong><span>Wybierz „Do ekranu początkowego”.</span></div>
+            <div><strong>4</strong><span>Dotknij „Dodaj”. Ikona Malina pojawi się obok aplikacji.</span></div>`
+          : `
+            <div><strong>1</strong><span>Otwórz tę stronę w Chrome.</span></div>
+            <div><strong>2</strong><span>Dotknij menu z trzema kropkami.</span></div>
+            <div><strong>3</strong><span>Wybierz „Zainstaluj aplikację” albo „Dodaj do ekranu głównego”.</span></div>`
+      }
+    </div>
+    <div class="modal-foot">
+      <button class="secondary-button" id="install-choice-back" type="button">Wróć</button>
+      <button class="primary-button close-modal" type="button">Jasne</button>
+    </div>`;
+  modal.querySelector("#install-choice-back")?.addEventListener("click", renderInstallChoice);
+  modal.querySelectorAll(".close-modal").forEach((button) =>
+    button.addEventListener("click", closeModal),
+  );
+  openModal();
+}
+
+async function openInstallInstructionsOld() {
   if (deferredInstallPrompt) {
     deferredInstallPrompt.prompt();
     await deferredInstallPrompt.userChoice.catch(() => null);
