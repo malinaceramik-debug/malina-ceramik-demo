@@ -85,6 +85,11 @@
         backdrop-filter: blur(18px);
       }
 
+      .card.preferred {
+        order: -1;
+        border-color: rgba(49, 95, 75, 0.22);
+      }
+
       .stage {
         position: relative;
         display: grid;
@@ -158,7 +163,10 @@
       .replay .kiln-wordmark,
       .replay .drop-letter,
       .replay .drop-cup,
-      .replay .minimal-logo,
+      .replay .minimal-clay,
+      .replay .minimal-imprint,
+      .replay .minimal-apron,
+      .replay .minimal-wordmark,
       .replay .minimal-line,
       .replay .morph-blob,
       .replay .morph-apron,
@@ -343,38 +351,109 @@
 
       /* 4. Minimal */
       .minimal {
-        background: linear-gradient(180deg, #fffaf6, #f7ede5);
+        background:
+          radial-gradient(circle at 50% 38%, rgba(221, 184, 135, 0.24), transparent 34%),
+          linear-gradient(180deg, #fffaf6, #f7ede5);
       }
 
-      .minimal-logo {
-        width: min(360px, 72vw);
+      .minimal-stack {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding-top: 18px;
+      }
+
+      .minimal-clay {
+        position: absolute;
+        top: -8px;
+        width: 232px;
+        height: 148px;
+        border-radius: 48% 52% 54% 46%;
+        background:
+          radial-gradient(circle at 34% 36%, rgba(255, 255, 255, 0.38), transparent 22%),
+          radial-gradient(circle at 70% 70%, rgba(99, 65, 44, 0.08), transparent 28%),
+          linear-gradient(145deg, rgba(235, 215, 193, 0.86), rgba(216, 177, 137, 0.7));
+        box-shadow:
+          inset 0 20px 38px rgba(255, 255, 255, 0.28),
+          inset 0 -18px 34px rgba(116, 77, 52, 0.1),
+          0 20px 48px rgba(74, 52, 38, 0.1);
         opacity: 0;
-        filter: blur(10px);
-        transform: translateY(10px);
-        animation: minimalIn 2.7s ease infinite;
+        transform: translateY(10px) scale(0.96) rotate(-2deg);
+        animation: minimalClay 3.1s ease infinite;
+      }
+
+      .minimal-imprint {
+        position: absolute;
+        top: 24px;
+        width: 122px;
+        height: 98px;
+        border: 2px solid rgba(49, 35, 28, 0.16);
+        border-radius: 40% 42% 28% 28%;
+        opacity: 0;
+        transform: scale(0.8);
+        animation: minimalImprint 3.1s ease infinite;
+      }
+
+      .minimal-apron {
+        width: 126px;
+        opacity: 0;
+        filter: blur(8px) drop-shadow(0 16px 26px rgba(41, 31, 24, 0.14));
+        transform: translateY(-18px) scale(1.04);
+        animation: minimalApron 3.1s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+      }
+
+      .minimal-wordmark {
+        width: min(272px, 66vw);
+        margin-top: 42px;
+        opacity: 0;
+        filter: blur(8px);
+        transform: translateY(12px);
+        animation: minimalWordmark 3.1s ease infinite;
       }
 
       .minimal-line {
         position: absolute;
-        bottom: 122px;
+        bottom: 78px;
         width: 112px;
         height: 2px;
         border-radius: 999px;
         background: var(--green);
         transform: scaleX(0);
         transform-origin: center;
-        animation: lineIn 2.7s ease infinite;
+        animation: lineIn 3.1s ease infinite;
       }
 
-      @keyframes minimalIn {
-        0%, 18% { opacity: 0; filter: blur(10px); transform: translateY(10px); }
-        38%, 78% { opacity: 1; filter: blur(0); transform: translateY(0); }
-        100% { opacity: 0; filter: blur(7px); transform: translateY(-8px); }
+      @keyframes minimalClay {
+        0%, 12% { opacity: 0; transform: translateY(14px) scale(0.94) rotate(-2deg); }
+        30%, 82% { opacity: 1; transform: translateY(0) scale(1) rotate(-1deg); }
+        100% { opacity: 0; transform: translateY(-5px) scale(1.02) rotate(0deg); }
+      }
+
+      @keyframes minimalImprint {
+        0%, 24% { opacity: 0; transform: scale(0.82); }
+        42%, 78% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(1.04); }
+      }
+
+      @keyframes minimalApron {
+        0%, 14% { opacity: 0; filter: blur(8px) drop-shadow(0 16px 26px rgba(41, 31, 24, 0.14)); transform: translateY(-24px) scale(1.05); }
+        32% { opacity: 1; filter: blur(0) drop-shadow(0 16px 26px rgba(41, 31, 24, 0.14)); transform: translateY(4px) scale(0.96); }
+        42%, 82% { opacity: 1; filter: blur(0) drop-shadow(0 16px 26px rgba(41, 31, 24, 0.14)); transform: translateY(0) scale(1); }
+        100% { opacity: 0; filter: blur(6px) drop-shadow(0 16px 26px rgba(41, 31, 24, 0.08)); transform: translateY(-8px) scale(1.02); }
+      }
+
+      @keyframes minimalWordmark {
+        0%, 34% { opacity: 0; filter: blur(8px); transform: translateY(14px); }
+        52%, 82% { opacity: 1; filter: blur(0); transform: translateY(0); }
+        100% { opacity: 0; filter: blur(5px); transform: translateY(-6px); }
       }
 
       @keyframes lineIn {
-        0%, 42% { transform: scaleX(0); opacity: 0; }
-        56%, 78% { transform: scaleX(1); opacity: 1; }
+        0%, 54% { transform: scaleX(0); opacity: 0; }
+        66%, 82% { transform: scaleX(1); opacity: 1; }
         100% { transform: scaleX(0.7); opacity: 0; }
       }
 
@@ -449,7 +528,7 @@
         <h1>Jak ma wejsc Malina?</h1>
         <p class="lead">
           To sa lekkie prototypy ruchu, jeszcze nie podpiete do aplikacji. Kliknij
-          “Odtworz jeszcze raz”, zeby zlapac rytm animacji.
+          "Odtworz jeszcze raz", zeby zlapac rytm animacji.
         </p>
       </section>
 
@@ -498,14 +577,19 @@
           </div>
         </article>
 
-        <article class="card">
+        <article class="card preferred">
           <div class="stage minimal">
-            <img class="minimal-logo" src="assets/malina-cup-logo.png" alt="" />
+            <div class="minimal-stack">
+              <span class="minimal-clay" aria-hidden="true"></span>
+              <span class="minimal-imprint" aria-hidden="true"></span>
+              <img class="minimal-apron" src="assets/malina-apron.png" alt="" />
+              <img class="minimal-wordmark" src="assets/malina-wordmark.png" alt="" />
+            </div>
             <span class="minimal-line" aria-hidden="true"></span>
           </div>
           <div class="copy">
-            <h2>Minimal premium</h2>
-            <p>Najczystsze i najbardziej codzienne. Malo ruchu, duzo oddechu, nic nie przeszkadza.</p>
+            <h2>Minimal premium + stempel</h2>
+            <p>Docelowy kierunek: spokojne wejscie, gliniany odcisk w tle i wyrazny odstep miedzy fartuchem a napisem.</p>
             <button type="button">Odtworz jeszcze raz</button>
           </div>
         </article>
