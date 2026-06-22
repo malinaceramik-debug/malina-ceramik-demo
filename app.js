@@ -379,8 +379,59 @@ const sharedStateKeys = [
   "customMaterialOptions",
 ];
 
+function normalizeEmail(email = "") {
+  return email.trim().toLowerCase();
+}
+
+function currentInstructorEmail() {
+  return normalizeEmail(liveUser?.email || currentSession()?.email || "");
+}
+
+function currentInstructorUid() {
+  return liveUser?.uid || currentSession()?.uid || "";
+}
+
 function currentInstructorId() {
-  return liveMode && liveUser ? liveUser.uid : "marta";
+  const email = currentInstructorEmail();
+  if (liveMode && email) return `instructor:${email}`;
+  return liveMode && currentInstructorUid() ? currentInstructorUid() : "marta";
+}
+
+function currentInstructorOwnerIds() {
+  const ids = new Set();
+  const email = currentInstructorEmail();
+  const uid = currentInstructorUid();
+  if (email) ids.add(`instructor:${email}`);
+  if (uid) ids.add(uid);
+  if (!liveMode || email === "malinaceramik@gmail.com") ids.add("marta");
+  return ids;
+}
+
+function currentInstructorOwnerMetadata() {
+  const email = currentInstructorEmail();
+  const uid = currentInstructorUid();
+  return {
+    ownerType: "instructor",
+    ownerEmail: email || undefined,
+    ownerUid: uid || undefined,
+  };
+}
+
+function isCurrentInstructorItem(item) {
+  const email = currentInstructorEmail();
+  const uid = currentInstructorUid();
+  if (item.ownerId && currentInstructorOwnerIds().has(item.ownerId)) return true;
+  if (email && normalizeEmail(item.ownerEmail || "") === email) return true;
+  if (uid && item.ownerUid === uid) return true;
+  return false;
+}
+
+function isInstructorPersonalItem(item) {
+  return (
+    state.role === "instructor" &&
+    isCurrentInstructorItem(item) &&
+    (item.personalJournal || item.ownerType === "instructor")
+  );
 }
 
 function currentInstructorName() {
@@ -884,13 +935,15 @@ function isOwnItem(item) {
   const session = currentSession();
   return (
     (state.role === "student" && item.ownerId === "anna") ||
-    (state.role === "instructor" && item.ownerId === currentInstructorId()) ||
+    (state.role === "instructor" && isCurrentInstructorItem(item)) ||
     (state.role === "guest" && item.ownerId === session?.ownerId)
   );
 }
 
 function visibleItemLabel(item) {
-  if (item.personalJournal) return item.name || `Wpis z ${formatFullDate(item.date)}`;
+  if (item.personalJournal || isInstructorPersonalItem(item)) {
+    return item.name || `Wpis z ${formatFullDate(item.date)}`;
+  }
   return isOwnItem(item) ? studentItemLabel(item) : itemCode(item);
 }
 
@@ -1288,9 +1341,10 @@ function studentGallerySections(items) {
 }
 
 function studentCombinations() {
-  const ownerId = state.role === "student" ? "anna" : currentInstructorId();
   const allItems = state.items
-    .filter((item) => item.ownerId === ownerId)
+    .filter((item) =>
+      state.role === "student" ? item.ownerId === "anna" : isCurrentInstructorItem(item),
+    )
     .sort(
       (a, b) =>
         Number(isCombinationCategorized(a)) - Number(isCombinationCategorized(b)) ||
@@ -1431,8 +1485,8 @@ function gallerySection(title, copy, items, selectable, sectionId) {
 function itemCard(item, selectable) {
   const selected = state.selected.includes(item.id);
   const label = visibleItemLabel(item);
-  const isStudentItem = isOwnItem(item) && !item.personalJournal;
-  const isJournalItem = state.role === "instructor" && item.personalJournal;
+  const isJournalItem = isInstructorPersonalItem(item);
+  const isStudentItem = isOwnItem(item) && !item.personalJournal && !isJournalItem;
   const groupItems = state.items
     .filter((candidate) => candidate.ownerId === item.ownerId && candidate.group === item.group)
     .sort((a, b) => a.id - b.id);
@@ -1491,7 +1545,7 @@ function journalStageLabel(stage) {
 
 function instructorCeramicsView() {
   const items = state.items
-    .filter((item) => item.ownerId === currentInstructorId())
+    .filter(isCurrentInstructorItem)
     .filter(
       (item) =>
         state.instructorPersonalFilter === "all" ||
@@ -1501,7 +1555,7 @@ function instructorCeramicsView() {
       const priority = { ready: 0, waiting: 1, collected: 2 };
       return priority[a.status] - priority[b.status] || b.date.localeCompare(a.date);
     });
-  const allItems = state.items.filter((item) => item.ownerId === currentInstructorId());
+  const allItems = state.items.filter(isCurrentInstructorItem);
   const filters = [
     ["all", "Wszystkie"],
     ["ready", "Do odbioru"],
@@ -1896,9 +1950,11 @@ function notificationsView() {
         </div>
       </section>`;
   }
-  const ownerId = state.role === "student" ? "anna" : currentInstructorId();
   const ready = state.items.filter(
-    (item) => item.ownerId === ownerId && !item.personalJournal && item.status === "ready",
+    (item) =>
+      (state.role === "student" ? item.ownerId === "anna" : isCurrentInstructorItem(item)) &&
+      !item.personalJournal &&
+      item.status === "ready",
   );
   return `
     <div class="page-head">
@@ -1935,6 +1991,8 @@ function notificationsView() {
 function instructorGallery() {
   const filtered = state.items
     .filter((item) => !item.personalJournal)
+    .filter((item) => item.ownerType !== "instructor")
+    .filter((item) => !isCurrentInstructorItem(item))
     .filter((item) => state.instructorStatus === "all" || item.status === state.instructorStatus)
     .filter((item) => state.instructorFiring === "all" || item.firing === state.instructorFiring)
     .filter((item) => `${itemLabel(item)} ${itemCode(item)} ${item.owner} ${item.group}`.toLowerCase().includes(state.search.toLowerCase()))
@@ -2280,7 +2338,7 @@ function studioClients() {
   const clients = new Map();
   state.items
     .filter((item) => !item.personalJournal && item.ownerType !== "instructor")
-    .filter((item) => item.ownerId && item.ownerId !== currentInstructorId())
+    .filter((item) => item.ownerId && !isCurrentInstructorItem(item))
     .forEach((item) => {
       if (!clients.has(item.ownerId)) {
         clients.set(item.ownerId, { id: item.ownerId, name: item.owner });
@@ -2290,7 +2348,13 @@ function studioClients() {
 }
 
 function instructorArchive() {
-  const archived = state.items.filter((item) => !item.personalJournal && item.status === "collected");
+  const archived = state.items.filter(
+    (item) =>
+      !item.personalJournal &&
+      item.ownerType !== "instructor" &&
+      !isCurrentInstructorItem(item) &&
+      item.status === "collected",
+  );
   return `
     <div class="page-head">
       <div>
@@ -2377,10 +2441,12 @@ function attachViewListeners() {
   });
 
   document.querySelector("#start-combination-sharing")?.addEventListener("click", () => {
-    const ownerId = state.role === "student" ? "anna" : currentInstructorId();
     combinationShareMode = true;
     combinationShareSelection = state.items
-      .filter((item) => item.ownerId === ownerId && isCombinationShared(item))
+      .filter((item) =>
+        (state.role === "student" ? item.ownerId === "anna" : isCurrentInstructorItem(item)) &&
+        isCombinationShared(item),
+      )
       .map((item) => item.id);
     state.combinationFilter = "all";
     render();
@@ -2393,9 +2459,10 @@ function attachViewListeners() {
   });
 
   document.querySelector("#save-combination-sharing")?.addEventListener("click", () => {
-    const ownerId = state.role === "student" ? "anna" : currentInstructorId();
     state.items = state.items.map((item) => {
-      if (item.ownerId !== ownerId || !isCombinationCategorized(item)) return item;
+      const ownItem =
+        state.role === "student" ? item.ownerId === "anna" : isCurrentInstructorItem(item);
+      if (!ownItem || !isCombinationCategorized(item)) return item;
       const sharing = normalizeSharing(item.sharing);
       const selected = combinationShareSelection.includes(item.id);
       return {
@@ -2644,9 +2711,9 @@ function openItemPreview(itemId) {
   if (!item) return;
   const editable = canEditItem(item);
   const deletable = canDeleteItem(item);
-  const isStudentItem = isOwnItem(item) && !item.personalJournal;
-  const isJournalItem = state.role === "instructor" && item.personalJournal;
-  const isPersonalEntry = item.personalJournal && editable;
+  const isJournalItem = isInstructorPersonalItem(item);
+  const isStudentItem = isOwnItem(item) && !item.personalJournal && !isJournalItem;
+  const isPersonalEntry = (item.personalJournal || isJournalItem) && editable;
   const previewItems = previewNavigationItems(item);
   const previewIndex = previewItems.findIndex((candidate) => candidate.id === item.id);
   const previousItem = previewItems[(previewIndex - 1 + previewItems.length) % previewItems.length];
@@ -2656,7 +2723,7 @@ function openItemPreview(itemId) {
     editable &&
     (item.status === "ready" ||
       item.status === "collected" ||
-      (item.personalJournal && item.journalStage === "finished"));
+      (isPersonalEntry && item.journalStage === "finished"));
   const label = visibleItemLabel(item);
   const finalImages = normalizeFinalImages(item.finalImages);
   const previewImage = displayItemImage(item);
@@ -2762,7 +2829,11 @@ function openItemPreview(itemId) {
 function previewNavigationItems(item) {
   const ownerId = state.role === "student" ? "anna" : item.ownerId;
   const items = state.items
-    .filter((candidate) => candidate.ownerId === ownerId)
+    .filter((candidate) =>
+      state.role === "instructor" && isCurrentInstructorItem(item)
+        ? isCurrentInstructorItem(candidate)
+        : candidate.ownerId === ownerId,
+    )
     .filter((candidate) =>
       item.personalJournal
         ? candidate.personalJournal
@@ -3628,6 +3699,7 @@ async function saveJournalItem() {
     return;
   }
   const isStudentEntry = journalDraft.mode === "student";
+  const instructorMetadata = isStudentEntry ? {} : currentInstructorOwnerMetadata();
   const id = liveMode
     ? Date.now()
     : Math.max(100, ...state.items.map((item) => item.id)) + 1;
@@ -3637,6 +3709,7 @@ async function saveJournalItem() {
     name: title || `Próba z ${formatFullDate("2026-06-11")}`,
     owner: isStudentEntry ? "Anna Kowalska" : currentInstructorName(),
     ownerId: isStudentEntry ? "anna" : currentInstructorId(),
+    ...instructorMetadata,
     image: journalDraft.image,
     status: journalDraft.stage === "finished" ? "collected" : "waiting",
     firing: journalDraft.firing,
@@ -4038,6 +4111,8 @@ async function confirmNewItems() {
   }
   const ownerId = selectedOwner.id;
   const owner = selectedOwner.name;
+  const isInstructorSelf = selectedOwner.type === "instructor";
+  const instructorMetadata = isInstructorSelf ? currentInstructorOwnerMetadata() : {};
   let nextId = liveMode
     ? Date.now()
     : state.role === "student"
@@ -4052,12 +4127,19 @@ async function confirmNewItems() {
       owner,
       ownerId,
       ownerType: selectedOwner.type,
-      ownerEmail: state.role === "guest" ? currentSession().email : undefined,
+      ownerEmail: isInstructorSelf
+        ? instructorMetadata.ownerEmail
+        : state.role === "guest"
+          ? currentSession().email
+          : undefined,
+      ownerUid: isInstructorSelf ? instructorMetadata.ownerUid : undefined,
       image: photo.image,
       status: "waiting",
       firing: photo.firing,
       group:
-        state.role === "student"
+        isInstructorSelf
+          ? "Moja ceramika"
+          : state.role === "student"
           ? "Dostawa 09.06"
           : state.role === "instructor"
             ? `Dostawa ${new Intl.DateTimeFormat("pl-PL", {
@@ -4066,6 +4148,8 @@ async function confirmNewItems() {
               }).format(new Date())}`
             : "Wypał gościnny 11.06",
       date: liveMode ? today : state.role === "student" ? "2026-06-09" : "2026-06-11",
+      personalJournal: isInstructorSelf ? true : undefined,
+      journalStage: isInstructorSelf ? "making" : undefined,
       finalImages: [],
       sharing: normalizeSharing(),
       recipe: normalizeRecipe(),
@@ -4081,7 +4165,7 @@ async function confirmNewItems() {
     state.emailEvents.unshift({
       id: `email-added-${Date.now()}`,
       type: "added",
-      email: session.email,
+      email: currentSession()?.email || "",
       itemIds: newItems.map((item) => item.id),
       createdAt: Date.now(),
     });
