@@ -79,6 +79,66 @@ function deviceId() {
   return id;
 }
 
+function mergePrimitiveArray(existing = [], incoming = []) {
+  return [...new Set([...(existing || []), ...(incoming || [])])];
+}
+
+function mergeArrayById(existing = [], incoming = []) {
+  const merged = new Map();
+  [...(existing || []), ...(incoming || [])].forEach((entry, index) => {
+    if (!entry) return;
+    const key = entry.id ?? `${entry.type || "entry"}-${entry.createdAt || index}`;
+    merged.set(String(key), entry);
+  });
+  return [...merged.values()];
+}
+
+function mergeItems(existing = [], incoming = [], deletedIds = new Set()) {
+  const merged = new Map();
+  [...(existing || []), ...(incoming || [])].forEach((item) => {
+    if (!item?.id || deletedIds.has(String(item.id))) return;
+    merged.set(String(item.id), item);
+  });
+  return [...merged.values()];
+}
+
+function mergeMaterialOptions(existing = {}, incoming = {}) {
+  const categories = ["clay", "glazes", "paints", "temperature"];
+  return Object.fromEntries(
+    categories.map((category) => [
+      category,
+      mergePrimitiveArray(existing?.[category] || [], incoming?.[category] || []),
+    ]),
+  );
+}
+
+function mergeStudioState(existing = {}, incoming = {}) {
+  const deletedItemIds = mergePrimitiveArray(
+    existing.deletedItemIds || [],
+    incoming.deletedItemIds || [],
+  ).filter((id) => id !== undefined && id !== null);
+  const deletedIds = new Set(deletedItemIds.map(String));
+
+  return {
+    ...existing,
+    ...incoming,
+    deletedItemIds: deletedItemIds.slice(-1000),
+    items: mergeItems(existing.items || [], incoming.items || [], deletedIds),
+    payments: mergeArrayById(existing.payments || [], incoming.payments || []),
+    emailEvents: mergeArrayById(existing.emailEvents || [], incoming.emailEvents || []),
+    notifications: mergeArrayById(
+      existing.notifications || [],
+      incoming.notifications || [],
+    )
+      .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+      .slice(0, 100),
+    customMaterialOptions: mergeMaterialOptions(
+      existing.customMaterialOptions || {},
+      incoming.customMaterialOptions || {},
+    ),
+  };
+}
+
 export const liveBackend = {
   isConfigured: hasFirebaseConfig,
 
@@ -139,20 +199,32 @@ export const liveBackend = {
     );
   },
 
+  async getStudioState() {
+    const api = await services();
+    const snapshot = await api.firestoreSdk.getDoc(studioStateReference(api));
+    return snapshot.exists() ? snapshot.data() : null;
+  },
+
   async saveStudioState(sharedState) {
     const api = await services();
     const user = api.auth.currentUser;
     if (!user) throw new Error("Sesja instruktora wygasła.");
-    await api.firestoreSdk.setDoc(
-      studioStateReference(api),
-      {
-        ...sharedState,
-        updatedAt: api.firestoreSdk.serverTimestamp(),
-        updatedBy: user.uid,
-        updatedByEmail: user.email || "",
-      },
-      { merge: true },
-    );
+    const reference = studioStateReference(api);
+    await api.firestoreSdk.runTransaction(api.db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const existingState = snapshot.exists() ? snapshot.data() : {};
+      const mergedState = mergeStudioState(existingState, sharedState);
+      transaction.set(
+        reference,
+        {
+          ...mergedState,
+          updatedAt: api.firestoreSdk.serverTimestamp(),
+          updatedBy: user.uid,
+          updatedByEmail: user.email || "",
+        },
+        { merge: true },
+      );
+    });
   },
 
   async uploadImage(file, folder = "items") {

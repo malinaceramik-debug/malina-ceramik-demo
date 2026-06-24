@@ -311,6 +311,7 @@ const initialState = {
   items: initialItems,
   emailEvents: [],
   notifications: [],
+  deletedItemIds: [],
   customMaterialOptions: {
     clay: [],
     glazes: [],
@@ -376,6 +377,7 @@ const sharedStateKeys = [
   "payments",
   "emailEvents",
   "notifications",
+  "deletedItemIds",
   "customMaterialOptions",
 ];
 
@@ -454,9 +456,16 @@ function liveEmptyState() {
   };
 }
 
+function defaultSharedValue(key) {
+  return key === "customMaterialOptions" ? {} : [];
+}
+
 function sharedStatePayload() {
   return Object.fromEntries(
-    sharedStateKeys.map((key) => [key, structuredClone(state[key] || [])]),
+    sharedStateKeys.map((key) => [
+      key,
+      structuredClone(state[key] ?? defaultSharedValue(key)),
+    ]),
   );
 }
 
@@ -468,6 +477,9 @@ function applyRemoteState(remoteState) {
   const knownNotificationIds = new Set(
     (state.notifications || []).map((notification) => notification.id),
   );
+  const deletedItemIds = new Set(
+    (remoteState.deletedItemIds || []).map((itemId) => String(itemId)),
+  );
   const newNotifications = (remoteState.notifications || []).filter(
     (notification) =>
       !knownNotificationIds.has(notification.id) &&
@@ -475,7 +487,12 @@ function applyRemoteState(remoteState) {
   );
   sharedStateKeys.forEach((key) => {
     if (remoteState?.[key] !== undefined) {
-      state[key] = structuredClone(remoteState[key]);
+      state[key] =
+        key === "items"
+          ? structuredClone(remoteState[key]).filter(
+              (item) => !deletedItemIds.has(String(item.id)),
+            )
+          : structuredClone(remoteState[key]);
     }
   });
   lastRemoteStateHash = sharedStateHash();
@@ -801,6 +818,7 @@ function loadState() {
       items,
       emailEvents: Array.isArray(saved.emailEvents) ? saved.emailEvents : [],
       notifications: Array.isArray(saved.notifications) ? saved.notifications : [],
+      deletedItemIds: Array.isArray(saved.deletedItemIds) ? saved.deletedItemIds : [],
       payments,
     };
   } catch {
@@ -3005,11 +3023,7 @@ function finalEffectSection(item, canAddFinal) {
 async function addFinalImages(itemId, images) {
   const storedImages = [];
   for (const image of images) {
-    storedImages.push(
-      image.file && liveMode
-        ? await liveBackend.uploadImage(image.file, "final")
-        : image.image || image,
-    );
+    storedImages.push(await persistentImageSource(image, "final"));
   }
   state.items = state.items.map((item) =>
     item.id === itemId
@@ -3111,6 +3125,7 @@ async function deleteItem(itemId) {
     items: structuredClone(state.items),
     emailEvents: structuredClone(state.emailEvents || []),
     notifications: structuredClone(state.notifications || []),
+    deletedItemIds: structuredClone(state.deletedItemIds || []),
     selected: [...state.selected],
     shareSelection: [...combinationShareSelection],
   };
@@ -3121,6 +3136,9 @@ async function deleteItem(itemId) {
   state.items = state.items.filter((candidate) => candidate.id !== itemId);
   state.emailEvents = removeItemReferences(state.emailEvents, itemId);
   state.notifications = removeItemReferences(state.notifications, itemId);
+  state.deletedItemIds = [
+    ...new Set([...(state.deletedItemIds || []), itemId]),
+  ].slice(-1000);
   state.selected = state.selected.filter((candidate) => candidate !== itemId);
   combinationShareSelection = combinationShareSelection.filter(
     (candidate) => candidate !== itemId,
@@ -3131,6 +3149,7 @@ async function deleteItem(itemId) {
     state.items = previousState.items;
     state.emailEvents = previousState.emailEvents;
     state.notifications = previousState.notifications;
+    state.deletedItemIds = previousState.deletedItemIds;
     state.selected = previousState.selected;
     combinationShareSelection = previousState.shareSelection;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -3689,9 +3708,8 @@ async function saveJournalItem() {
   try {
     button.disabled = true;
     button.textContent = liveMode ? "Wysyłanie zdjęcia..." : button.textContent;
-    if (journalDraft.file && liveMode) {
-      journalDraft.image = await liveBackend.uploadImage(journalDraft.file, "journal");
-    }
+    journalDraft.image = await persistentImageSource(journalDraft, "journal");
+    journalDraft.file = null;
   } catch (error) {
     button.disabled = false;
     button.textContent = "Dodaj do dziennika";
@@ -4018,6 +4036,7 @@ async function prepareImage(file) {
       reader.readAsDataURL(file);
     });
   }
+  try {
   const bitmap = await createImageBitmap(file);
   const maxSide = 1800;
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
@@ -4042,6 +4061,35 @@ async function prepareImage(file) {
     image: URL.createObjectURL(preparedFile),
     file: preparedFile,
   };
+  } catch {
+    return {
+      image: URL.createObjectURL(file),
+      file,
+    };
+  }
+}
+
+function isTemporaryImageUrl(value) {
+  return (
+    typeof value === "string" &&
+    (value.startsWith("blob:") || (liveMode && value.startsWith("data:")))
+  );
+}
+
+async function persistentImageSource(entry, folder) {
+  const image = typeof entry === "string" ? entry : entry?.image;
+  const file = typeof entry === "string" ? null : entry?.file;
+  if (!liveMode) return image;
+  if (file) return liveBackend.uploadImage(file, folder);
+  if (!image) {
+    throw new Error("Brakuje zdjęcia. Dodaj je ponownie.");
+  }
+  if (isTemporaryImageUrl(image)) {
+    throw new Error(
+      "To zdjęcie jest tylko lokalnym podglądem. Dodaj je ponownie, żeby zapisać je trwale w pracowni.",
+    );
+  }
+  return image;
 }
 
 function pluralPhotos(count) {
@@ -4095,10 +4143,7 @@ async function confirmNewItems() {
     for (const photo of addFlow.photos) {
       storedPhotos.push({
         ...photo,
-        image:
-          photo.file && liveMode
-            ? await liveBackend.uploadImage(photo.file, "items")
-            : photo.image,
+        image: await persistentImageSource(photo, "items"),
       });
     }
   } catch (error) {
